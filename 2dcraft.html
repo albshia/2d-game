@@ -181,8 +181,10 @@
               world[x][y] = 'grass'; // Grass on the very top layer
             } else if (depthFromSurface <= 4) {
               world[x][y] = 'dirt'; // Dirt layer below grass
-            } else if (depthFromSurface > 4) {
-              world[x][y] = 'stone'; // Stone only deep underground
+            } else if (depthFromSurface > 15) {
+              world[x][y] = 'stone'; // Stone only very deep underground
+            } else {
+              world[x][y] = 'dirt'; // Fill remaining depths with dirt
             }
           }
         }
