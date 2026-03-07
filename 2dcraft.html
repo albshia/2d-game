@@ -162,10 +162,10 @@
       // Create height map with smooth transitions
       const heightMap = [];
       for (let x = 0; x < WIDTH; x++) {
-        let h = 25; // Base height
-        h += Math.sin(x * 0.05) * 8; // Large wave
-        h += Math.sin(x * 0.15) * 4; // Medium wave
-        h += Math.sin(x * 0.3) * 2;  // Small wave
+        let h = 30; // Base height
+        h += Math.sin(x * 0.02) * 12; // Very large smooth wave
+        h += Math.sin(x * 0.08) * 6;  // Large wave
+        h += Math.sin(x * 0.2) * 2;   // Medium wave
         heightMap[x] = Math.floor(h);
       }
 
