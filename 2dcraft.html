@@ -247,7 +247,7 @@
     // Calculate spawn position on surface
     const spawnX = 20;
     const spawnSurfaceHeight = 25 + Math.sin(spawnX * 0.05) * 8 + Math.sin(spawnX * 0.15) * 4 + Math.sin(spawnX * 0.3) * 2;
-    const player = { x: spawnX + 0.5, y: spawnSurfaceHeight - 2, vx:0, vy:0, speed: 6, w:0.6, h:0.9, skin: '#ffeb3b' };
+    const player = { x: spawnX + 0.5, y: spawnSurfaceHeight - 2, vx:0, vy:0, speed: 6, w:0.6, h:2.0, skin: '#ffeb3b' };
     const keys = { left:false, right:false, jump:false };
 
     // Mob system
@@ -347,12 +347,31 @@
       if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT) return;
 
       if (e.button === 0 || mouseButtons.left) {
-        world[gx][gy] = null; // Break block
+        // Break block
+        const block = world[gx][gy];
+        if (block === 'doors') {
+          // Break both parts of the door
+          world[gx][gy] = null;
+          if (gy > 0 && world[gx][gy-1] === 'doors') world[gx][gy-1] = null;
+          if (gy < HEIGHT-1 && world[gx][gy+1] === 'doors') world[gx][gy+1] = null;
+        } else {
+          world[gx][gy] = null;
+        }
       } else if (e.button === 2 || mouseButtons.right) {
         // avoid placing inside player's bbox
         const left = player.x - player.w/2, right = player.x + player.w/2, bottom = player.y - player.h/2, top = player.y + player.h/2;
         if (gx+1 > left && gx < right && gy+1 > bottom && gy < top) return;
-        world[gx][gy] = BLOCKS[selected].id; // Place block
+
+        const selectedBlock = BLOCKS[selected].id;
+        if (selectedBlock === 'doors') {
+          // Place 2-block tall door
+          if (gy > 0 && gy < HEIGHT-1 && !world[gx][gy] && !world[gx][gy-1]) {
+            world[gx][gy] = 'doors';
+            world[gx][gy-1] = 'doors';
+          }
+        } else {
+          world[gx][gy] = selectedBlock;
+        }
       }
     }
 
@@ -426,7 +445,7 @@
     function isSolid(gx,gy){
       if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT) return false;
       const block = world[gx][gy];
-      return block && block !== 'water' && block !== 'ladders' && block !== 'doors'; // Water, ladders, and doors are not solid
+      return block && block !== 'water' && block !== 'ladders'; // Water and ladders are not solid, doors are now solid
     }
 
     function resolveCollisions(){
