@@ -183,13 +183,8 @@
               world[x][y] = 'grass'; // Grass on the very top layer
             } else if (depthFromSurface <= 4) {
               world[x][y] = 'dirt'; // Dirt layer below grass
-            } else if (depthFromSurface <= 25) {
-              const r = Math.random();
-              if (r < 0.02) world[x][y] = 'coal';
-              else if (r < 0.04) world[x][y] = 'iron';
-              else if (r < 0.05) world[x][y] = 'gold';
-              else if (r < 0.08) world[x][y] = 'gravel';
-              else world[x][y] = 'stone';
+            } else {
+              world[x][y] = 'stone'; // Stone everywhere else underground
             }
           }
         }
@@ -197,7 +192,7 @@
 
       // Add bedrock at the bottom
       for (let x = 0; x < WIDTH; x++) {
-        world[x][HEIGHT - 1] = 'bedrock';
+        world[x][HEIGHT - 1] = 'stone';
       }
 
       // Generate caves deep underground (below depth 30)
@@ -212,58 +207,6 @@
             const distance = Math.sqrt(dx*dx + dy*dy);
             if (nx >= 0 && nx < WIDTH && ny >= 0 && ny < HEIGHT && distance <= caveSize && world[nx][ny] !== 'bedrock') {
               world[nx][ny] = null; // Carve out cave
-            }
-          }
-        }
-      }
-
-      // Generate ore veins deeper (below depth 25)
-      for (let i = 0; i < 150; i++) {
-        const x = Math.floor(Math.random() * WIDTH);
-        const y = Math.floor(Math.random() * 15) + 35; // Much deeper
-        const size = Math.floor(Math.random() * 4) + 3;
-        const oreType = Math.random();
-
-        for (let dx = -size; dx <= size; dx++) {
-          for (let dy = -size; dy <= size; dy++) {
-            const nx = x + dx, ny = y + dy;
-            if (nx >= 0 && nx < WIDTH && ny >= 0 && ny < HEIGHT && world[nx][ny] === 'stone') {
-              if (oreType < 0.4) world[nx][ny] = 'coal';
-              else if (oreType < 0.7) world[nx][ny] = 'iron';
-              else world[nx][ny] = 'gold';
-            }
-          }
-        }
-      }
-
-      // Generate gravel patches in groups (not scattered)
-      for (let i = 0; i < 20; i++) {
-        const x = Math.floor(Math.random() * WIDTH);
-        const y = Math.floor(Math.random() * 10) + 30; // Deeper
-        const size = Math.floor(Math.random() * 4) + 3;
-
-        for (let dx = -size; dx <= size; dx++) {
-          for (let dy = -size; dy <= size; dy++) {
-            const nx = x + dx, ny = y + dy;
-            if (nx >= 0 && nx < WIDTH && ny >= 0 && ny < HEIGHT && world[nx][ny] === 'stone') {
-              world[nx][ny] = 'gravel';
-            }
-          }
-        }
-      }
-
-      // Generate sand patches in groups near surface
-      for (let i = 0; i < 15; i++) {
-        const x = Math.floor(Math.random() * WIDTH);
-        const surfaceY = heightMap[x];
-        const y = surfaceY + Math.floor(Math.random() * 3) + 1;
-        const size = Math.floor(Math.random() * 3) + 2;
-
-        for (let dx = -size; dx <= size; dx++) {
-          for (let dy = -size; dy <= size; dy++) {
-            const nx = x + dx, ny = y + dy;
-            if (nx >= 0 && nx < WIDTH && ny >= 0 && ny < HEIGHT && world[nx][ny] === 'dirt') {
-              world[nx][ny] = 'sand';
             }
           }
         }
