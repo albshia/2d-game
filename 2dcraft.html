@@ -177,8 +177,8 @@
           if (y < surfaceHeight) {
             // Underground layers
             const depthFromSurface = surfaceHeight - y;
-            if (depthFromSurface === 1) {
-              world[x][y] = 'grass'; // Grass on the very top layer
+            if (depthFromSurface <= 1) {
+              world[x][y] = 'grass'; // Grass covering the surface
             } else if (depthFromSurface <= 4) {
               world[x][y] = 'dirt'; // Dirt layer below grass
             } else if (depthFromSurface > 15) {
