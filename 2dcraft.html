@@ -1,0 +1,676 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MiniCraft (browser)</title>
+  <style>
+    html, body { margin:0; height:100%; overflow:hidden; background:#000; font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    #hud {
+      position: fixed; inset: 0; pointer-events: none;
+      display:flex; align-items:flex-end; justify-content:center;
+      padding: 18px;
+    }
+    #crosshair {
+      position: fixed; left:50%; top:50%;
+      width: 14px; height: 14px; transform: translate(-50%,-50%);
+      opacity: .9;
+    }
+    #crosshair:before, #crosshair:after {
+      content:""; position:absolute; left:50%; top:50%;
+      background:#fff; transform:translate(-50%,-50%);
+      border-radius: 1px;
+    }
+    #crosshair:before { width: 14px; height: 2px; }
+    #crosshair:after  { width: 2px; height: 14px; }
+
+    #hotbar {
+      display:flex; gap:10px;
+      background: rgba(0,0,0,.35);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 14px;
+      padding: 10px 12px;
+      pointer-events: none;
+      backdrop-filter: blur(6px);
+    }
+    .slot {
+      width: 52px; height: 52px;
+      border-radius: 10px;
+      border: 2px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.06);
+      display:flex; align-items:center; justify-content:center;
+      position: relative;
+    }
+    .slot.selected {
+      border-color: rgba(255,255,255,.9);
+      box-shadow: 0 0 0 2px rgba(0,0,0,.5) inset, 0 8px 20px rgba(0,0,0,.35);
+    }
+    .slot .num {
+      position:absolute; left:6px; top:4px;
+      font-size: 12px; color: rgba(255,255,255,.9);
+      text-shadow: 0 1px 2px rgba(0,0,0,.7);
+    }
+    .slot .swatch {
+      width: 28px; height: 28px; border-radius: 6px;
+      border: 1px solid rgba(255,255,255,.25);
+      box-shadow: 0 2px 10px rgba(0,0,0,.35) inset;
+    }
+    #hint {
+      position: fixed; left: 14px; top: 14px;
+      color: rgba(255,255,255,.9);
+      background: rgba(0,0,0,.35);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 12px;
+      padding: 10px 12px;
+      max-width: 380px;
+      line-height: 1.35;
+      pointer-events:none;
+      backdrop-filter: blur(6px);
+      font-size: 13px;
+    }
+    #hint kbd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      padding: 2px 6px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.2);
+      background: rgba(255,255,255,.06);
+    }
+  </style>
+</head>
+<body>
+  <div id="hint">
+    Click to lock mouse. <br/>
+    Move: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> • Jump: <kbd>Space</kbd> • Sprint: <kbd>Shift</kbd> <br/>
+    Break: Left click • Place: Right click • Hotbar: <kbd>1</kbd>-<kbd>5</kbd>
+  </div>
+  <div id="crosshair"></div>
+  <canvas id="game"></canvas>
+  <div id="hud">
+    <div id="hotbar"></div>
+  </div>
+
+  <!-- Time and Weather Controls -->
+  <div id="controls" style="position: fixed; left: 14px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px;">
+    <div style="background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 10px; backdrop-filter: blur(6px);">
+      <div style="color: rgba(255,255,255,.9); font-size: 12px; margin-bottom: 8px;">Time</div>
+      <button id="timeDay" style="background: #4caf50; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px; margin-right: 4px;">Day</button>
+      <button id="timeNight" style="background: #1a237e; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px;">Night</button>
+    </div>
+
+    <div style="background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 10px; backdrop-filter: blur(6px);">
+      <div style="color: rgba(255,255,255,.9); font-size: 12px; margin-bottom: 8px;">Weather</div>
+      <button id="weatherClear" style="background: #81c784; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px; margin-right: 4px;">Clear</button>
+      <button id="weatherRain" style="background: #42a5f5; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px;">Rain</button>
+    </div>
+
+    <div style="background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 10px; backdrop-filter: blur(6px);">
+      <div style="color: rgba(255,255,255,.9); font-size: 12px; margin-bottom: 8px;">Mobs</div>
+      <button id="spawnCow" style="background: #8B4513; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px; margin-right: 4px;">Cow</button>
+      <button id="spawnSheep" style="background: #FFFFFF; color: black; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px; margin-right: 4px;">Sheep</button>
+      <button id="spawnPig" style="background: #FFC0CB; color: black; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px; margin-right: 4px;">Pig</button>
+      <button id="despawnAll" style="background: #f44336; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px;">Despawn All</button>
+    </div>
+
+    <div style="background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 10px; backdrop-filter: blur(6px);">
+      <div style="color: rgba(255,255,255,.9); font-size: 12px; margin-bottom: 8px;">World</div>
+      <button id="regenerateMap" style="background: #4caf50; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px;">Regenerate Map</button>
+    </div>
+
+    <div style="background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 10px; backdrop-filter: blur(6px);">
+      <div style="color: rgba(255,255,255,.9); font-size: 12px; margin-bottom: 8px;">Skin</div>
+      <div id="skinSelector" style="display: flex; gap: 4px; flex-wrap: wrap;"></div>
+    </div>
+  </div>
+
+  <script>
+    // Side (horizontal) view 2D version
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+
+    const BLOCKS = [
+      { id: 'grass', color: '#4caf50' },
+      { id: 'dirt',  color: '#8b5a2b' },
+      { id: 'stone', color: '#9e9e9e' },
+      { id: 'logs',  color: '#7a4b2a' },
+      { id: 'water', color: '#2196f3' },
+      { id: 'planks', color: '#8d6e63' },
+      { id: 'bricks', color: '#b71c1c' },
+      { id: 'ladders', color: '#8d6e63' },
+      { id: 'doors', color: '#8d6e63' },
+    ];
+    let selected = 0;
+
+    const hotbarEl = document.getElementById('hotbar');
+    function renderHotbar(){
+      hotbarEl.innerHTML = '';
+      BLOCKS.forEach((b,i)=>{
+        const slot = document.createElement('div');
+        slot.className = 'slot' + (i===selected? ' selected':'');
+        const num = document.createElement('div'); num.className='num'; num.textContent = (i+1);
+        const swatch = document.createElement('div'); swatch.className='swatch'; swatch.style.background = b.color;
+        slot.appendChild(num); slot.appendChild(swatch); hotbarEl.appendChild(slot);
+      });
+    }
+    renderHotbar();
+    window.addEventListener('keydown', (e)=>{ const n = parseInt(e.key,10); if (!Number.isNaN(n) && n>=1 && n<=BLOCKS.length){ selected = n-1; renderHotbar(); } if (e.code==='Space') e.preventDefault(); });
+
+    const WIDTH = 200, HEIGHT = 70;
+    let tileSize = 24;
+    const world = Array.from({length: WIDTH}, ()=>Array.from({length: HEIGHT}, ()=>null));
+
+    // Generate smooth layered terrain using Perlin-like noise
+    function generateTerrain() {
+      // Create height map with smooth transitions
+      const heightMap = [];
+      for (let x = 0; x < WIDTH; x++) {
+        let h = 25; // Base height
+        h += Math.sin(x * 0.05) * 8; // Large wave
+        h += Math.sin(x * 0.15) * 4; // Medium wave
+        h += Math.sin(x * 0.3) * 2;  // Small wave
+        heightMap[x] = Math.floor(h);
+      }
+
+      // Fill terrain from bottom to top
+      for (let x = 0; x < WIDTH; x++) {
+        const surfaceHeight = heightMap[x];
+
+        for (let y = 0; y < HEIGHT; y++) {
+          if (y < surfaceHeight) {
+            // Underground layers
+            const depthFromSurface = surfaceHeight - y;
+            if (depthFromSurface === 1) {
+              world[x][y] = 'grass'; // Grass on the very top layer
+            } else if (depthFromSurface <= 4) {
+              world[x][y] = 'dirt'; // Dirt layer below grass
+            } else if (depthFromSurface <= 25) {
+              const r = Math.random();
+              if (r < 0.02) world[x][y] = 'coal';
+              else if (r < 0.04) world[x][y] = 'iron';
+              else if (r < 0.05) world[x][y] = 'gold';
+              else if (r < 0.08) world[x][y] = 'gravel';
+              else world[x][y] = 'stone';
+            }
+          }
+        }
+      }
+
+      // Add bedrock at the bottom
+      for (let x = 0; x < WIDTH; x++) {
+        world[x][HEIGHT - 1] = 'bedrock';
+      }
+
+      // Generate caves deep underground (below depth 30)
+      for (let i = 0; i < 50; i++) {
+        const caveX = Math.floor(Math.random() * WIDTH);
+        const caveY = Math.floor(Math.random() * 20) + 35; // Deep underground
+        const caveSize = Math.floor(Math.random() * 8) + 5;
+
+        for (let dx = -caveSize; dx <= caveSize; dx++) {
+          for (let dy = -caveSize; dy <= caveSize; dy++) {
+            const nx = caveX + dx, ny = caveY + dy;
+            const distance = Math.sqrt(dx*dx + dy*dy);
+            if (nx >= 0 && nx < WIDTH && ny >= 0 && ny < HEIGHT && distance <= caveSize && world[nx][ny] !== 'bedrock') {
+              world[nx][ny] = null; // Carve out cave
+            }
+          }
+        }
+      }
+
+      // Generate ore veins deeper (below depth 25)
+      for (let i = 0; i < 150; i++) {
+        const x = Math.floor(Math.random() * WIDTH);
+        const y = Math.floor(Math.random() * 15) + 35; // Much deeper
+        const size = Math.floor(Math.random() * 4) + 3;
+        const oreType = Math.random();
+
+        for (let dx = -size; dx <= size; dx++) {
+          for (let dy = -size; dy <= size; dy++) {
+            const nx = x + dx, ny = y + dy;
+            if (nx >= 0 && nx < WIDTH && ny >= 0 && ny < HEIGHT && world[nx][ny] === 'stone') {
+              if (oreType < 0.4) world[nx][ny] = 'coal';
+              else if (oreType < 0.7) world[nx][ny] = 'iron';
+              else world[nx][ny] = 'gold';
+            }
+          }
+        }
+      }
+
+      // Generate gravel patches in groups (not scattered)
+      for (let i = 0; i < 20; i++) {
+        const x = Math.floor(Math.random() * WIDTH);
+        const y = Math.floor(Math.random() * 10) + 30; // Deeper
+        const size = Math.floor(Math.random() * 4) + 3;
+
+        for (let dx = -size; dx <= size; dx++) {
+          for (let dy = -size; dy <= size; dy++) {
+            const nx = x + dx, ny = y + dy;
+            if (nx >= 0 && nx < WIDTH && ny >= 0 && ny < HEIGHT && world[nx][ny] === 'stone') {
+              world[nx][ny] = 'gravel';
+            }
+          }
+        }
+      }
+
+      // Generate sand patches in groups near surface
+      for (let i = 0; i < 15; i++) {
+        const x = Math.floor(Math.random() * WIDTH);
+        const surfaceY = heightMap[x];
+        const y = surfaceY + Math.floor(Math.random() * 3) + 1;
+        const size = Math.floor(Math.random() * 3) + 2;
+
+        for (let dx = -size; dx <= size; dx++) {
+          for (let dy = -size; dy <= size; dy++) {
+            const nx = x + dx, ny = y + dy;
+            if (nx >= 0 && nx < WIDTH && ny >= 0 && ny < HEIGHT && world[nx][ny] === 'dirt') {
+              world[nx][ny] = 'sand';
+            }
+          }
+        }
+      }
+
+      // Generate water bodies near surface
+      for (let i = 0; i < 8; i++) {
+        const x = Math.floor(Math.random() * WIDTH);
+        const surfaceY = heightMap[x];
+        const y = surfaceY + Math.floor(Math.random() * 2) + 2; // Slightly deeper than sand
+        const size = Math.floor(Math.random() * 4) + 3;
+
+        for (let dx = -size; dx <= size; dx++) {
+          for (let dy = -size; dy <= size; dy++) {
+            const nx = x + dx, ny = y + dy;
+            if (nx >= 0 && nx < WIDTH && ny >= 0 && ny < HEIGHT && world[nx][ny] === 'dirt') {
+              world[nx][ny] = 'water';
+            }
+          }
+        }
+      }
+
+      // Generate tree clusters (groups of logs)
+      for (let i = 0; i < 25; i++) {
+        const x = Math.floor(Math.random() * WIDTH);
+        const surfaceY = heightMap[x];
+        if (surfaceY > 0 && world[x][surfaceY - 1] === 'grass') {
+          const treeHeight = Math.floor(Math.random() * 4) + 3;
+          for (let h = 0; h < treeHeight; h++) {
+            if (surfaceY - 1 + h < HEIGHT) {
+              world[x][surfaceY - 1 + h] = 'logs';
+            }
+          }
+        }
+      }
+    }
+
+    generateTerrain();
+
+    // Calculate spawn position on surface
+    const spawnX = 20;
+    const spawnSurfaceHeight = 25 + Math.sin(spawnX * 0.05) * 8 + Math.sin(spawnX * 0.15) * 4 + Math.sin(spawnX * 0.3) * 2;
+    const player = { x: spawnX + 0.5, y: spawnSurfaceHeight - 2, vx:0, vy:0, speed: 6, w:0.6, h:0.9, skin: '#ffeb3b' };
+    const keys = { left:false, right:false, jump:false };
+
+    // Mob system
+    const MOB_TYPES = {
+      cow: { color: '#8B4513', w: 0.8, h: 0.6, speed: 1 },
+      sheep: { color: '#FFFFFF', w: 0.7, h: 0.5, speed: 0.8 },
+      pig: { color: '#FFC0CB', w: 0.6, h: 0.5, speed: 1.2 }
+    };
+    let mobs = [];
+
+    // Time and weather system
+    let gameTime = 0; // 0-24000 (Minecraft-like time)
+    let weather = 'clear'; // 'clear', 'rain'
+    let timeSpeed = 1; // How fast time passes
+
+    // Skin options
+    const SKINS = ['#ffeb3b', '#4caf50', '#2196f3', '#ff9800', '#e91e63', '#9c27b0', '#607d8b'];
+    window.addEventListener('keydown', e=>{ if (e.code==='KeyA' || e.code==='ArrowLeft') keys.left=true; if (e.code==='KeyD' || e.code==='ArrowRight') keys.right=true; if (e.code==='Space') keys.jump=true; const n = parseInt(e.key,10); if (!Number.isNaN(n) && n>=1 && n<=BLOCKS.length){ selected = n-1; renderHotbar(); } });
+    window.addEventListener('keyup', e=>{ if (e.code==='KeyA' || e.code==='ArrowLeft') keys.left=false; if (e.code==='KeyD' || e.code==='ArrowRight') keys.right=false; if (e.code==='Space') keys.jump=false; });
+
+    // Initialize skin selector
+    const skinSelector = document.getElementById('skinSelector');
+    SKINS.forEach((color, i) => {
+      const skinBtn = document.createElement('button');
+      skinBtn.style.background = color;
+      skinBtn.style.border = '2px solid rgba(255,255,255,0.3)';
+      skinBtn.style.width = '24px';
+      skinBtn.style.height = '24px';
+      skinBtn.style.borderRadius = '50%';
+      skinBtn.style.cursor = 'pointer';
+      skinBtn.onclick = () => { player.skin = color; };
+      skinSelector.appendChild(skinBtn);
+    });
+
+    // Time and weather controls
+    document.getElementById('timeDay').onclick = () => { gameTime = 6000; }; // Day time
+    document.getElementById('timeNight').onclick = () => { gameTime = 18000; }; // Night time
+    document.getElementById('weatherClear').onclick = () => { weather = 'clear'; };
+    document.getElementById('weatherRain').onclick = () => { weather = 'rain'; };
+
+    // Mob controls
+    document.getElementById('spawnCow').onclick = () => { spawnMob('cow'); };
+    document.getElementById('spawnSheep').onclick = () => { spawnMob('sheep'); };
+    document.getElementById('spawnPig').onclick = () => { spawnMob('pig'); };
+    document.getElementById('despawnAll').onclick = () => { mobs = []; };
+
+    // World controls
+    document.getElementById('regenerateMap').onclick = () => {
+      // Clear the world
+      for (let x = 0; x < WIDTH; x++) {
+        for (let y = 0; y < HEIGHT; y++) {
+          world[x][y] = null;
+        }
+      }
+      // Regenerate terrain
+      generateTerrain();
+      // Respawn player on surface
+      const spawnSurfaceHeight = 25 + Math.sin(20 * 0.05) * 8 + Math.sin(20 * 0.15) * 4 + Math.sin(20 * 0.3) * 2;
+      player.x = 20.5;
+      player.y = spawnSurfaceHeight - 2;
+      player.vx = 0;
+      player.vy = 0;
+      // Clear mobs
+      mobs = [];
+    };
+
+    // Spawn mob function
+    function spawnMob(type) {
+      const mobType = MOB_TYPES[type];
+      const mob = {
+        type: type,
+        x: player.x + (Math.random() - 0.5) * 10,
+        y: player.y + (Math.random() - 0.5) * 5,
+        vx: 0,
+        vy: 0,
+        w: mobType.w,
+        h: mobType.h,
+        speed: mobType.speed,
+        color: mobType.color,
+        direction: Math.random() > 0.5 ? 1 : -1,
+        moveTimer: 0
+      };
+      mobs.push(mob);
+    }
+
+    // Mouse placement / removal
+    let mouse = { x:0, y:0 };
+    let mouseButtons = { left: false, right: false };
+
+    function handleBlockAction(e) {
+      const cam = getCameraOffset();
+      const worldPx = mouse.x + cam.x;
+      const worldPy = (canvas.height - mouse.y) + cam.y;
+      const gx = Math.floor(worldPx / tileSize);
+      const gy = Math.floor(worldPy / tileSize);
+      if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT) return;
+
+      if (e.button === 0 || mouseButtons.left) {
+        world[gx][gy] = null; // Break block
+      } else if (e.button === 2 || mouseButtons.right) {
+        // avoid placing inside player's bbox
+        const left = player.x - player.w/2, right = player.x + player.w/2, bottom = player.y - player.h/2, top = player.y + player.h/2;
+        if (gx+1 > left && gx < right && gy+1 > bottom && gy < top) return;
+        world[gx][gy] = BLOCKS[selected].id; // Place block
+      }
+    }
+
+    canvas.addEventListener('mousemove', e => {
+      const r = canvas.getBoundingClientRect();
+      mouse.x = e.clientX - r.left;
+      mouse.y = e.clientY - r.top;
+
+      // Handle dragging
+      if (mouseButtons.left || mouseButtons.right) {
+        handleBlockAction({ button: mouseButtons.left ? 0 : 2 });
+      }
+    });
+
+    canvas.addEventListener('mousedown', e => {
+      if (e.button === 0) mouseButtons.left = true;
+      if (e.button === 2) mouseButtons.right = true;
+      handleBlockAction(e);
+    });
+
+    canvas.addEventListener('mouseup', e => {
+      if (e.button === 0) mouseButtons.left = false;
+      if (e.button === 2) mouseButtons.right = false;
+    });
+
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+    function resize(){ canvas.width = innerWidth; canvas.height = innerHeight; tileSize = Math.max(12, Math.min(36, Math.floor(Math.min(innerWidth, innerHeight) / 25))); }
+    window.addEventListener('resize', resize); resize();
+
+    function getCameraOffset(){
+      const camX = player.x * tileSize - canvas.width/2 + tileSize/2;
+      const camY = player.y * tileSize - canvas.height/2 + tileSize/2;
+
+      // Clamp camera to world boundaries
+      const maxCamX = (WIDTH * tileSize) - canvas.width;
+      const maxCamY = (HEIGHT * tileSize) - canvas.height;
+
+      return {
+        x: Math.max(0, Math.min(camX, maxCamX)),
+        y: Math.max(0, Math.min(camY, maxCamY))
+      };
+    }
+
+    function isSolid(gx,gy){
+      if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT) return false;
+      const block = world[gx][gy];
+      return block && block !== 'water' && block !== 'ladders' && block !== 'doors'; // Water, ladders, and doors are not solid
+    }
+
+    function resolveCollisions(){
+      const eps = 1e-3;
+      let left = player.x - player.w/2, right = player.x + player.w/2, bottom = player.y - player.h/2, top = player.y + player.h/2;
+      const minX = Math.floor(left), maxX = Math.floor(right);
+      const minY = Math.floor(bottom), maxY = Math.floor(top);
+      let grounded = false;
+
+      for (let gx = minX; gx <= maxX; gx++){
+        for (let gy = minY; gy <= maxY; gy++){
+          if (!isSolid(gx,gy)) continue;
+          const tileLeft = gx, tileRight = gx+1, tileBottom = gy, tileTop = gy+1;
+          const overlapX = Math.min(right, tileRight) - Math.max(left, tileLeft);
+          const overlapY = Math.min(top, tileTop) - Math.max(bottom, tileBottom);
+          if (overlapX > 0 && overlapY > 0){
+            if (overlapX < overlapY){
+              // resolve X
+              if (player.x < gx+0.5) player.x -= overlapX + eps; else player.x += overlapX + eps;
+            } else {
+              // resolve Y
+              if (player.y < gy+0.5){ player.y -= overlapY + eps; player.vy = 0; } else { player.y += overlapY + eps; player.vy = 0; grounded = true; }
+            }
+            left = player.x - player.w/2; right = player.x + player.w/2; bottom = player.y - player.h/2; top = player.y + player.h/2;
+          }
+        }
+      }
+      return grounded;
+    }
+
+    function draw(){
+      // Update time
+      gameTime = (gameTime + timeSpeed) % 24000;
+
+      // Calculate lighting based on time (darker at night)
+      const timeOfDay = gameTime / 24000;
+      let brightness = 1;
+      if (timeOfDay > 0.25 && timeOfDay < 0.75) { // Day time
+        brightness = 1;
+      } else { // Night time
+        brightness = 0.3;
+      }
+
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      const cam = getCameraOffset();
+
+      const startX = Math.floor(cam.x / tileSize) - 1;
+      const endX = Math.ceil((cam.x + canvas.width) / tileSize) + 1;
+      const startY = Math.floor(cam.y / tileSize) - 1;
+      const endY = Math.ceil((cam.y + canvas.height) / tileSize) + 1;
+
+      for (let gx = startX; gx <= endX; gx++){
+        for (let gy = startY; gy <= endY; gy++){
+          const sx = gx * tileSize - cam.x;
+          const sy = canvas.height - ((gy+1) * tileSize - cam.y);
+          if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT){
+            // Sky with time-based color
+            let skyColor = '#87CEEB'; // Day sky
+            if (brightness < 0.5) skyColor = '#191970'; // Night sky
+            ctx.fillStyle = skyColor;
+            ctx.fillRect(sx, sy, tileSize, tileSize);
+            continue;
+          }
+          const t = world[gx][gy];
+          if (t){
+            const block = BLOCKS.find(b=>b.id===t);
+            ctx.fillStyle = block.color;
+            // Apply brightness to blocks
+            if (brightness < 1) {
+              const rgb = hexToRgb(block.color);
+              ctx.fillStyle = `rgb(${Math.floor(rgb.r * brightness)}, ${Math.floor(rgb.g * brightness)}, ${Math.floor(rgb.b * brightness)})`;
+            }
+            ctx.fillRect(sx, sy, tileSize, tileSize);
+          } else {
+            // Render void/air blocks with sky color
+            let skyColor = '#87CEEB'; // Day sky
+            if (brightness < 0.5) skyColor = '#191970'; // Night sky
+            ctx.fillStyle = skyColor;
+            ctx.fillRect(sx, sy, tileSize, tileSize);
+          }
+          ctx.strokeStyle = 'rgba(0,0,0,0.06)'; ctx.strokeRect(sx+0.5, sy+0.5, tileSize-1, tileSize-1);
+        }
+      }
+
+      // Weather effects
+      if (weather === 'rain') {
+        ctx.fillStyle = 'rgba(100, 149, 237, 0.6)';
+        for (let i = 0; i < 100; i++) {
+          const x = Math.random() * canvas.width;
+          const y = Math.random() * canvas.height;
+          ctx.fillRect(x, y, 1, 8);
+        }
+      }
+
+      // Render mobs
+      mobs.forEach(mob => {
+        const worldPx = mob.x * tileSize;
+        const worldPy = mob.y * tileSize;
+        const screenX = worldPx - cam.x - (mob.w*tileSize)/2;
+        const screenY = canvas.height - (worldPy - cam.y) - (mob.h*tileSize)/2;
+        ctx.fillStyle = mob.color;
+        ctx.fillRect(screenX, screenY, mob.w*tileSize, mob.h*tileSize);
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(screenX, screenY, mob.w*tileSize, mob.h*tileSize);
+      });
+
+      // player
+      const worldPx = player.x * tileSize;
+      const worldPy = player.y * tileSize;
+      const screenX = worldPx - cam.x - (player.w*tileSize)/2;
+      const screenY = canvas.height - (worldPy - cam.y) - (player.h*tileSize)/2;
+      ctx.fillStyle = player.skin; ctx.fillRect(screenX, screenY, player.w*tileSize, player.h*tileSize);
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.strokeRect(screenX, screenY, player.w*tileSize, player.h*tileSize);
+
+      // highlight mouse tile
+      const cam2 = getCameraOffset();
+      const worldPxM = mouse.x + cam2.x; const worldPyM = (canvas.height - mouse.y) + cam2.y;
+      const hx = Math.floor(worldPxM / tileSize); const hy = Math.floor(worldPyM / tileSize);
+      const hsx = hx * tileSize - cam2.x; const hsy = canvas.height - ((hy+1) * tileSize - cam2.y);
+      if (hx>=0 && hy>=0 && hx<WIDTH && hy<HEIGHT){ ctx.strokeStyle='rgba(255,255,255,0.9)'; ctx.lineWidth=2; ctx.strokeRect(hsx+1, hsy+1, tileSize-2, tileSize-2); }
+
+      // center crosshair
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.moveTo(canvas.width/2 - 8, canvas.height/2); ctx.lineTo(canvas.width/2 + 8, canvas.height/2); ctx.moveTo(canvas.width/2, canvas.height/2 - 8); ctx.lineTo(canvas.width/2, canvas.height/2 + 8); ctx.stroke();
+    }
+
+    // Helper function to convert hex to RGB
+    function hexToRgb(hex) {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : null;
+    }
+
+    let last = performance.now();
+    function loop(t){
+      const dt = Math.min((t-last)/1000, 0.05); last = t;
+      // input
+      let ax = 0;
+      if (keys.left) ax -= 1; if (keys.right) ax += 1;
+      const targetVx = ax * player.speed;
+      // simple accel
+      player.vx += (targetVx - player.vx) * Math.min(10*dt, 1);
+      // gravity
+      player.vy += -25 * dt;
+      // jump (if grounded)
+      // apply movement
+      player.x += player.vx * dt;
+      player.y += player.vy * dt;
+
+      const grounded = resolveCollisions();
+      if (grounded && keys.jump){ player.vy = 9.0; }
+
+      // clamp within world
+      player.x = Math.max(0.2, Math.min(WIDTH-0.2, player.x));
+      player.y = Math.max(0.2, Math.min(HEIGHT-0.2, player.y));
+
+      // Update mobs
+      mobs.forEach((mob, index) => {
+        // Simple AI: random movement
+        mob.moveTimer -= dt;
+        if (mob.moveTimer <= 0) {
+          mob.direction = Math.random() > 0.5 ? 1 : -1;
+          mob.moveTimer = 2 + Math.random() * 3; // Move for 2-5 seconds
+        }
+
+        // Apply movement
+        const targetVx = mob.direction * mob.speed;
+        mob.vx += (targetVx - mob.vx) * Math.min(5*dt, 1);
+        mob.vy += -25 * dt; // gravity
+
+        mob.x += mob.vx * dt;
+        mob.y += mob.vy * dt;
+
+        // Mob collision detection
+        const eps = 1e-3;
+        let left = mob.x - mob.w/2, right = mob.x + mob.w/2, bottom = mob.y - mob.h/2, top = mob.y + mob.h/2;
+        const minX = Math.floor(left), maxX = Math.floor(right);
+        const minY = Math.floor(bottom), maxY = Math.floor(top);
+        let grounded = false;
+
+        for (let gx = minX; gx <= maxX; gx++){
+          for (let gy = minY; gy <= maxY; gy++){
+            if (!isSolid(gx,gy)) continue;
+            const tileLeft = gx, tileRight = gx+1, tileBottom = gy, tileTop = gy+1;
+            const overlapX = Math.min(right, tileRight) - Math.max(left, tileLeft);
+            const overlapY = Math.min(top, tileTop) - Math.max(bottom, tileBottom);
+            if (overlapX > 0 && overlapY > 0){
+              if (overlapX < overlapY){
+                // resolve X
+                if (mob.x < gx+0.5) mob.x -= overlapX + eps; else mob.x += overlapX + eps;
+                mob.vx = 0;
+              } else {
+                // resolve Y
+                if (mob.y < gy+0.5){ mob.y -= overlapY + eps; mob.vy = 0; } else { mob.y += overlapY + eps; mob.vy = 0; grounded = true; }
+              }
+              left = mob.x - mob.w/2; right = mob.x + mob.w/2; bottom = mob.y - mob.h/2; top = mob.y + mob.h/2;
+            }
+          }
+        }
+
+        // Keep mobs in bounds
+        mob.x = Math.max(0.2, Math.min(WIDTH-0.2, mob.x));
+        mob.y = Math.max(0.2, Math.min(HEIGHT-0.2, mob.y));
+      });
+
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
