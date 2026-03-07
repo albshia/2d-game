@@ -558,8 +558,21 @@
       const worldPy = player.y * tileSize;
       const screenX = worldPx - cam.x - (player.w*tileSize)/2;
       const screenY = canvas.height - (worldPy - cam.y) - (player.h*tileSize)/2;
-      ctx.fillStyle = player.skin; ctx.fillRect(screenX, screenY, player.w*tileSize, player.h*tileSize);
-      ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.strokeRect(screenX, screenY, player.w*tileSize, player.h*tileSize);
+
+      // Draw body (bottom part)
+      const bodyHeight = player.h * tileSize * 0.7; // Body takes up 70% of height
+      const headHeight = player.h * tileSize * 0.3; // Head takes up 30% of height
+      ctx.fillStyle = player.skin;
+      ctx.fillRect(screenX, screenY + headHeight, player.w*tileSize, bodyHeight);
+
+      // Draw head (top part, beige)
+      ctx.fillStyle = '#F5F5DC'; // Beige color
+      ctx.fillRect(screenX, screenY, player.w*tileSize, headHeight);
+
+      // Draw outline
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(screenX, screenY, player.w*tileSize, player.h*tileSize);
 
       // highlight mouse tile
       const cam2 = getCameraOffset();
