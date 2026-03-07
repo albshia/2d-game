@@ -320,6 +320,7 @@
     let mouse = { x:0, y:0 };
     let mouseButtons = { left: false, right: false };
     let blockTooltip = { show: false, x: 0, y: 0, blockName: '' };
+    let doorStates = {}; // Track open/closed state of doors by coordinate
 
     function handleBlockAction(e) {
       const cam = getCameraOffset();
@@ -333,27 +334,42 @@
         // Break block
         const block = world[gx][gy];
         if (block === 'doors') {
-          // Break both parts of the door
+          // Break both parts of the door and remove their state
+          const key1 = `${gx},${gy}`;
+          const key2 = `${gx},${gy-1}`;
+          const key3 = `${gx},${gy+1}`;
+          delete doorStates[key1];
+          delete doorStates[key2];
+          delete doorStates[key3];
           world[gx][gy] = null;
           if (gy > 0 && world[gx][gy-1] === 'doors') world[gx][gy-1] = null;
           if (gy < HEIGHT-1 && world[gx][gy+1] === 'doors') world[gx][gy+1] = null;
         } else {
           world[gx][gy] = null;
         }
-      } else if (e.button === 2 || mouseButtons.right) {
-        // avoid placing inside player's bbox
-        const left = player.x - player.w/2, right = player.x + player.w/2, bottom = player.y - player.h/2, top = player.y + player.h/2;
-        if (gx+1 > left && gx < right && gy+1 > bottom && gy < top) return;
+      } else if (e.button === 1 || e.button === 2) {
+        // Middle click or right click on door toggles it
+        if (e.button === 1 && world[gx][gy] === 'doors') {
+          const key = `${gx},${gy}`;
+          doorStates[key] = !doorStates[key];
+        } else if (e.button === 2) {
+          // Right click to place blocks
+          const left = player.x - player.w/2, right = player.x + player.w/2, bottom = player.y - player.h/2, top = player.y + player.h/2;
+          if (gx+1 > left && gx < right && gy+1 > bottom && gy < top) return;
 
-        const selectedBlock = BLOCKS[selected].id;
-        if (selectedBlock === 'doors') {
-          // Place 2-block tall door
-          if (gy > 0 && gy < HEIGHT-1 && !world[gx][gy] && !world[gx][gy-1]) {
-            world[gx][gy] = 'doors';
-            world[gx][gy-1] = 'doors';
+          const selectedBlock = BLOCKS[selected].id;
+          if (selectedBlock === 'doors') {
+            // Place 2-block tall door
+            if (gy > 0 && gy < HEIGHT-1 && !world[gx][gy] && !world[gx][gy-1]) {
+              world[gx][gy] = 'doors';
+              world[gx][gy-1] = 'doors';
+              // Initialize door state as closed
+              const key = `${gx},${gy}`;
+              doorStates[key] = false;
+            }
+          } else {
+            world[gx][gy] = selectedBlock;
           }
-        } else {
-          world[gx][gy] = selectedBlock;
         }
       }
     }
@@ -428,7 +444,12 @@
     function isSolid(gx,gy){
       if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT) return false;
       const block = world[gx][gy];
-      return block && block !== 'water' && block !== 'ladders'; // Water and ladders are not solid, doors are now solid
+      if (block === 'doors') {
+        // Check if door is open
+        const key = `${gx},${gy}`;
+        return !doorStates[key]; // Solid only if door is closed
+      }
+      return block && block !== 'water' && block !== 'ladders'; // Water and ladders are not solid
     }
 
     function resolveCollisions(){
