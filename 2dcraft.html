@@ -16,14 +16,6 @@
       width: 14px; height: 14px; transform: translate(-50%,-50%);
       opacity: .9;
     }
-    #crosshair:before, #crosshair:after {
-      content:""; position:absolute; left:50%; top:50%;
-      background:#fff; transform:translate(-50%,-50%);
-      border-radius: 1px;
-    }
-    #crosshair:before { width: 14px; height: 2px; }
-    #crosshair:after  { width: 2px; height: 14px; }
-
     #hotbar {
       display:flex; gap:10px;
       background: rgba(0,0,0,.35);
@@ -84,7 +76,6 @@
     Move: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> • Jump: <kbd>Space</kbd> • Sprint: <kbd>Shift</kbd> <br/>
     Break: Left click • Place: Right click • Hotbar: <kbd>1</kbd>-<kbd>5</kbd>
   </div>
-  <div id="crosshair"></div>
   <canvas id="game"></canvas>
   <div id="hud">
     <div id="hotbar"></div>
@@ -155,7 +146,7 @@
     renderHotbar();
     window.addEventListener('keydown', (e)=>{ const n = parseInt(e.key,10); if (!Number.isNaN(n) && n>=1 && n<=BLOCKS.length){ selected = n-1; renderHotbar(); } if (e.code==='Space') e.preventDefault(); });
 
-    const WIDTH = 200, HEIGHT = 70;
+    const WIDTH = 1000, HEIGHT = 200;
     let tileSize = 24;
     const world = Array.from({length: WIDTH}, ()=>Array.from({length: HEIGHT}, ()=>null));
 
@@ -523,9 +514,6 @@
       const hx = Math.floor(worldPxM / tileSize); const hy = Math.floor(worldPyM / tileSize);
       const hsx = hx * tileSize - cam2.x; const hsy = canvas.height - ((hy+1) * tileSize - cam2.y);
       if (hx>=0 && hy>=0 && hx<WIDTH && hy<HEIGHT){ ctx.strokeStyle='rgba(255,255,255,0.9)'; ctx.lineWidth=2; ctx.strokeRect(hsx+1, hsy+1, tileSize-2, tileSize-2); }
-
-      // center crosshair
-      ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.moveTo(canvas.width/2 - 8, canvas.height/2); ctx.lineTo(canvas.width/2 + 8, canvas.height/2); ctx.moveTo(canvas.width/2, canvas.height/2 - 8); ctx.lineTo(canvas.width/2, canvas.height/2 + 8); ctx.stroke();
     }
 
     // Helper function to convert hex to RGB
