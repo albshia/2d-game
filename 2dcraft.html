@@ -234,8 +234,8 @@
 
     // Skin options
     const SKINS = ['#ffeb3b', '#4caf50', '#2196f3', '#ff9800', '#e91e63', '#9c27b0', '#607d8b'];
-    window.addEventListener('keydown', e=>{ if (e.code==='KeyA' || e.code==='ArrowLeft') keys.left=true; if (e.code==='KeyD' || e.code==='ArrowRight') keys.right=true; if (e.code==='Space') keys.jump=true; const n = parseInt(e.key,10); if (!Number.isNaN(n) && n>=1 && n<=BLOCKS.length){ selected = n-1; renderHotbar(); } });
-    window.addEventListener('keyup', e=>{ if (e.code==='KeyA' || e.code==='ArrowLeft') keys.left=false; if (e.code==='KeyD' || e.code==='ArrowRight') keys.right=false; if (e.code==='Space') keys.jump=false; });
+    window.addEventListener('keydown', e=>{ if (e.code==='KeyA' || e.code==='ArrowLeft') keys.left=true; if (e.code==='KeyD' || e.code==='ArrowRight') keys.right=true; if (e.code==='Space' || e.code==='KeyW' || e.code==='ArrowUp') keys.jump=true; const n = parseInt(e.key,10); if (!Number.isNaN(n) && n>=1 && n<=BLOCKS.length){ selected = n-1; renderHotbar(); } });
+    window.addEventListener('keyup', e=>{ if (e.code==='KeyA' || e.code==='ArrowLeft') keys.left=false; if (e.code==='KeyD' || e.code==='ArrowRight') keys.right=false; if (e.code==='Space' || e.code==='KeyW' || e.code==='ArrowUp') keys.jump=false; });
 
     // Initialize skin selector
     const skinSelector = document.getElementById('skinSelector');
