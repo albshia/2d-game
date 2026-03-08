@@ -80,7 +80,7 @@
   <div id="hint">
     Click to lock mouse. <br/>
     Move: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> • Jump: <kbd>Space</kbd> • Sprint: <kbd>Shift</kbd> <br/>
-    Break: Left click • Place: Right click • Hotbar: <kbd>1</kbd>-<kbd>5</kbd>
+    Break: Left click • Place: Right click • Hotbar: <kbd>1</kbd>-<kbd>9</kbd><kbd>0</kbd>
   </div>
   <canvas id="game"></canvas>
   <div id="hud">
@@ -135,6 +135,7 @@
       { id: 'bricks', color: '#b71c1c' },
       { id: 'ladders', color: '#a0522d' },
       { id: 'doors', color: '#654321' },
+      { id: 'glass', color: '#e0f7fa' },
     ];
     let selected = 0;
 
@@ -144,14 +145,14 @@
       BLOCKS.forEach((b,i)=>{
         const slot = document.createElement('div');
         slot.className = 'slot' + (i===selected? ' selected':'');
-        const num = document.createElement('div'); num.className='num'; num.textContent = (i+1);
+        const num = document.createElement('div'); num.className='num'; num.textContent = i === 9 ? '0' : (i+1);
         const swatch = document.createElement('div'); swatch.className='swatch'; swatch.style.background = b.color;
         const name = document.createElement('div'); name.className='block-name'; name.textContent = b.id.charAt(0).toUpperCase() + b.id.slice(1);
         slot.appendChild(num); slot.appendChild(swatch); slot.appendChild(name); hotbarEl.appendChild(slot);
       });
     }
     renderHotbar();
-    window.addEventListener('keydown', (e)=>{ const n = parseInt(e.key,10); if (!Number.isNaN(n) && n>=1 && n<=BLOCKS.length){ selected = n-1; renderHotbar(); } if (e.code==='Space') e.preventDefault(); });
+    window.addEventListener('keydown', (e)=>{ const n = parseInt(e.key,10); if (!Number.isNaN(n) && ((n>=1 && n<=9) || n===0)){ selected = n === 0 ? 9 : n-1; renderHotbar(); } if (e.code==='Space' || e.code==='KeyW' || e.code==='ArrowUp') e.preventDefault(); });
 
     const WIDTH = 1000, HEIGHT = 200;
     let tileSize = 24;
