@@ -244,10 +244,7 @@
           }
         }
       }
-              }
-            }
-          }
-        }
+    }
       }
     }
 
@@ -260,18 +257,6 @@
           // Check if this dirt block is exposed (has air/null above it)
           if (y + 1 >= HEIGHT || world[x][y + 1] === null) {
             world[x][y] = 'grass';
-          }
-        }
-      }
-    }
-
-    // Post-processing: remove exposed stone blocks above terrain
-    for (let x = 0; x < WIDTH; x++) {
-      for (let y = 0; y < HEIGHT; y++) {
-        if (world[x][y] === 'stone') {
-          // Check if stone is exposed (has air/null above it)
-          if (y + 1 >= HEIGHT || world[x][y + 1] === null) {
-            world[x][y] = null; // Remove exposed stone
           }
         }
       }
