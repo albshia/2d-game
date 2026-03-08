@@ -154,7 +154,7 @@
     renderHotbar();
     window.addEventListener('keydown', (e)=>{ const n = parseInt(e.key,10); if (!Number.isNaN(n) && ((n>=1 && n<=9) || n===0)){ selected = n === 0 ? 9 : n-1; renderHotbar(); } if (e.code==='Space' || e.code==='KeyW' || e.code==='ArrowUp') e.preventDefault(); });
 
-    const WIDTH = 1000, HEIGHT = 200;
+    const WIDTH = 500, HEIGHT = 200;
     let tileSize = 24;
     const world = Array.from({length: WIDTH}, ()=>Array.from({length: HEIGHT}, ()=>null));
 
@@ -164,9 +164,9 @@
       const heightMap = [];
       for (let x = 0; x < WIDTH; x++) {
         let h = 30; // Base height
-        h += Math.sin(x * 0.02) * 12; // Very large smooth wave
-        h += Math.sin(x * 0.08) * 6;  // Large wave
-        h += Math.sin(x * 0.2) * 2;   // Medium wave
+        h += Math.sin(x * 0.02) * 3; // Very gentle large wave
+        h += Math.sin(x * 0.08) * 2; // Gentle large wave
+        h += Math.sin(x * 0.2) * 1;  // Small gentle wave
         heightMap[x] = Math.floor(h);
       }
 
