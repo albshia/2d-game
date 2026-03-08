@@ -372,21 +372,23 @@
       if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT) return;
       let acted = false;
 
+      function getDoorLowerY(x, y) {
+        if (world[x][y] !== 'door') return null;
+        if (y > 0 && world[x][y - 1] === 'door') return y - 1;
+        return y;
+      }
+
       if (e.button === 0 || mouseButtons.left) {
         // Break block
         const block = world[gx][gy];
         if (block === 'door') {
-          // Break both parts of the door and remove their state
-          const key1 = `${gx},${gy}`;
-          const key2 = `${gx},${gy-1}`;
-          const key3 = `${gx},${gy+1}`;
-          delete doorStates[key1];
-          delete doorStates[key2];
-          delete doorStates[key3];
-          world[gx][gy] = null;
+          // Break both parts of the door using its lower block as canonical position
+          const lowerY = getDoorLowerY(gx, gy);
+          const key = `${gx},${lowerY}`;
+          delete doorStates[key];
+          world[gx][lowerY] = null;
+          if (lowerY + 1 < HEIGHT && world[gx][lowerY + 1] === 'door') world[gx][lowerY + 1] = null;
           acted = true;
-          if (gy > 0 && world[gx][gy-1] === 'door') world[gx][gy-1] = null;
-          if (gy < HEIGHT-1 && world[gx][gy+1] === 'door') world[gx][gy+1] = null;
         } else {
           if (world[gx][gy] !== null) acted = true;
           world[gx][gy] = null;
@@ -394,7 +396,8 @@
       } else if (e.button === 1 || e.button === 2) {
         // Middle click or right click on door toggles it
         if (e.button === 1 && world[gx][gy] === 'door') {
-          const key = `${gx},${gy}`;
+          const lowerY = getDoorLowerY(gx, gy);
+          const key = `${gx},${lowerY}`;
           doorStates[key] = !doorStates[key];
         } else if (e.button === 2) {
           // Right click to place blocks
@@ -408,8 +411,8 @@
               world[gx][gy] = 'door';
               world[gx][gy-1] = 'door';
               acted = true;
-              // Initialize door state as closed
-              const key = `${gx},${gy}`;
+              // Initialize door state on lower door block
+              const key = `${gx},${gy-1}`;
               doorStates[key] = false;
             }
           } else {
@@ -496,8 +499,9 @@
       if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT) return false;
       const block = world[gx][gy];
       if (block === 'door') {
-        // Check if door is open
-        const key = `${gx},${gy}`;
+        // Check if door is open using lower door block state
+        const lowerY = (gy > 0 && world[gx][gy - 1] === 'door') ? gy - 1 : gy;
+        const key = `${gx},${lowerY}`;
         return !doorStates[key]; // Solid only if door is closed
       }
       return block && block !== 'water' && block !== 'ladder'; // Water and ladder are not solid
