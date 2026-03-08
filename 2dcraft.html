@@ -544,9 +544,13 @@
       // Torso and arms
       ctx.fillStyle = '#4aa3df';
       ctx.fillRect(bodyX, bodyY, bodyW, bodyH);
+      const sleeveHeight = 4 * pixel;
+      ctx.fillStyle = '#4aa3df';
+      ctx.fillRect(bodyX - limbW, bodyY + armSwing, limbW, sleeveHeight);
+      ctx.fillRect(bodyX + bodyW, bodyY - armSwing, limbW, sleeveHeight);
       ctx.fillStyle = '#e8be97';
-      ctx.fillRect(bodyX - limbW, bodyY + armSwing, limbW, limbH);
-      ctx.fillRect(bodyX + bodyW, bodyY - armSwing, limbW, limbH);
+      ctx.fillRect(bodyX - limbW, bodyY + armSwing + sleeveHeight, limbW, limbH - sleeveHeight);
+      ctx.fillRect(bodyX + bodyW, bodyY - armSwing + sleeveHeight, limbW, limbH - sleeveHeight);
 
       // Pants/legs
       ctx.fillStyle = '#355ec9';
