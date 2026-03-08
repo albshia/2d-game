@@ -209,9 +209,9 @@
               // Only carve if below surface
               if (ny < heightMap[nx]) {
                 // Carve hollow center, leave stone walls
-                if (distance <= caveSize * 0.6) {
+                if (distance <= caveSize * 0.5) {
                   world[nx][ny] = null; // Hollow interior
-                } else if (Math.random() > 0.3) {
+                } else if (Math.random() > 0.1) {
                   world[nx][ny] = 'stone'; // Stone formations
                 }
               }
@@ -234,9 +234,9 @@
               // Only carve if below surface
               if (ny < heightMap[nx]) {
                 // Carve hollow center, leave stone walls
-                if (distance <= caveSize * 0.6) {
+                if (distance <= caveSize * 0.5) {
                   world[nx][ny] = null; // Hollow interior
-                } else if (Math.random() > 0.3) {
+                } else if (Math.random() > 0.1) {
                   world[nx][ny] = 'stone'; // Stone formations
                 }
               }
