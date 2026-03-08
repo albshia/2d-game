@@ -25,6 +25,41 @@
       pointer-events: none;
       backdrop-filter: blur(6px);
     }
+    #healthHud {
+      position: fixed;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 280px;
+      pointer-events: none;
+      background: rgba(0,0,0,.35);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 12px;
+      padding: 8px 10px;
+      backdrop-filter: blur(6px);
+    }
+    #healthBarBg {
+      width: 100%;
+      height: 16px;
+      border-radius: 10px;
+      background: rgba(255,255,255,.14);
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.2);
+    }
+    #healthBarFill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #d32f2f, #ff5252);
+      transition: width 100ms linear;
+    }
+    #healthText {
+      margin-top: 5px;
+      text-align: center;
+      color: rgba(255,255,255,.92);
+      font-size: 12px;
+      letter-spacing: .2px;
+      text-shadow: 0 1px 2px rgba(0,0,0,.6);
+    }
     .slot {
       width: 52px; height: 52px;
       border-radius: 10px;
@@ -83,6 +118,10 @@
     Break: Left click • Place: Right click • Hotbar: <kbd>1</kbd>-<kbd>9</kbd><kbd>0</kbd>
   </div>
   <canvas id="game"></canvas>
+  <div id="healthHud">
+    <div id="healthBarBg"><div id="healthBarFill"></div></div>
+    <div id="healthText">Health: 20 / 20</div>
+  </div>
   <div id="hud">
     <div id="hotbar"></div>
   </div>
@@ -323,8 +362,13 @@
       walkCycle: 0,
       grounded: false,
       handActionTimer: 0,
-      handActionSide: 1
+      handActionSide: 1,
+      maxHealth: 20,
+      health: 20,
+      invulnTimer: 0,
+      attackCooldown: 0
     };
+    let spawnPoint = { x: spawn.x, y: spawn.y };
     const PLAYER_COLLIDER_H = 1.9;
     const HAND_ACTION_DURATION = 0.16;
     const keys = { left:false, right:false, jump:false, down:false };
@@ -335,7 +379,47 @@
       sheep: { w: 1.15, h: 1.0, speed: 0.85 },
       pig: { w: 1.1, h: 0.9, speed: 1.2 }
     };
+    const HOSTILE_TYPES = {
+      zombie: { w: 0.74, h: 1.9, speed: 2.0, maxHealth: 20, damage: 3, hitCooldown: 0.9, color: '#3a8a42' },
+      skeleton: { w: 0.68, h: 1.9, speed: 2.2, maxHealth: 20, damage: 2, hitCooldown: 0.75, color: '#d8d8d8' },
+      creeper: { w: 0.78, h: 1.8, speed: 1.9, maxHealth: 20, damage: 4, hitCooldown: 1.1, color: '#4caf50' }
+    };
     let mobs = [];
+    let hostileSpawnTimer = 0;
+    const healthBarFill = document.getElementById('healthBarFill');
+    const healthText = document.getElementById('healthText');
+
+    function updateHealthUI() {
+      const ratio = Math.max(0, Math.min(1, player.health / player.maxHealth));
+      healthBarFill.style.width = `${ratio * 100}%`;
+      healthText.textContent = `Health: ${Math.ceil(player.health)} / ${player.maxHealth}`;
+    }
+    updateHealthUI();
+
+    function respawnPlayer() {
+      player.x = spawnPoint.x;
+      player.y = spawnPoint.y;
+      player.vx = 0;
+      player.vy = 0;
+      player.health = player.maxHealth;
+      player.invulnTimer = 1.0;
+      updateHealthUI();
+    }
+
+    function damagePlayer(amount) {
+      if (player.invulnTimer > 0) return;
+      player.health = Math.max(0, player.health - amount);
+      player.invulnTimer = 0.45;
+      updateHealthUI();
+      if (player.health <= 0) {
+        respawnPlayer();
+      }
+    }
+
+    function isNightTime() {
+      const t = gameTime / 24000;
+      return !(t > 0.25 && t < 0.75);
+    }
 
     // Time and weather system
     let gameTime = 6000; // 0-24000 (Minecraft-like time), start at day time
@@ -451,10 +535,8 @@
       generateTerrain();
       // Respawn player on grass near map center
       const respawn = getGrassSpawn(Math.floor(WIDTH / 2));
-      player.x = respawn.x;
-      player.y = respawn.y;
-      player.vx = 0;
-      player.vy = 0;
+      spawnPoint = { x: respawn.x, y: respawn.y };
+      respawnPlayer();
       // Clear mobs
       mobs = [];
     };
@@ -480,6 +562,94 @@
       mobs.push(mob);
     }
 
+    function spawnHostile(type, x, y) {
+      const mobType = HOSTILE_TYPES[type];
+      mobs.push({
+        type,
+        x,
+        y,
+        vx: 0,
+        vy: 0,
+        w: mobType.w,
+        h: mobType.h,
+        speed: mobType.speed,
+        hostile: true,
+        health: mobType.maxHealth,
+        maxHealth: mobType.maxHealth,
+        damage: mobType.damage,
+        hitCooldown: mobType.hitCooldown,
+        attackTimer: 0,
+        direction: Math.random() > 0.5 ? 1 : -1,
+        moveTimer: 0,
+        walkCycle: Math.random() * Math.PI * 2,
+        idleCycle: Math.random() * Math.PI * 2,
+        facing: Math.random() > 0.5 ? 1 : -1,
+        tint: mobType.color
+      });
+    }
+
+    function getSurfaceHeightAt(x) {
+      for (let y = HEIGHT - 1; y >= 0; y--) {
+        if (world[x][y] !== null) return y + 1;
+      }
+      return 1;
+    }
+
+    function canSpawnEntityAt(x, y, w, h) {
+      const eps = 1e-4;
+      const left = Math.floor(x - w / 2 + eps);
+      const right = Math.floor(x + w / 2 - eps);
+      const bottom = Math.floor(y - h / 2 + eps);
+      const top = Math.floor(y + h / 2 - eps);
+      if (left < 0 || right >= WIDTH || bottom < 1 || top >= HEIGHT) return false;
+
+      for (let gx = left; gx <= right; gx++) {
+        for (let gy = bottom; gy <= top; gy++) {
+          if (isSolid(gx, gy)) return false;
+        }
+      }
+      // Need solid support under feet.
+      for (let gx = left; gx <= right; gx++) {
+        if (!isSolid(gx, bottom - 1)) return false;
+      }
+      return true;
+    }
+
+    function findHostileSpawnPosition(mode, hostileType) {
+      const w = hostileType.w;
+      const h = hostileType.h;
+      for (let i = 0; i < 80; i++) {
+        const x = Math.max(2, Math.min(WIDTH - 3, Math.floor(player.x + (Math.random() - 0.5) * 90)));
+        const surface = getSurfaceHeightAt(x);
+        let y;
+        if (mode === 'cave') {
+          const caveTop = Math.max(3, surface - 8);
+          if (caveTop <= 3) continue;
+          y = 2 + Math.random() * (caveTop - 2);
+        } else if (mode === 'rain_day') {
+          if (Math.random() < 0.65) {
+            y = surface + h / 2 + 0.05;
+          } else {
+            const caveTop = Math.max(3, surface - 8);
+            if (caveTop <= 3) continue;
+            y = 2 + Math.random() * (caveTop - 2);
+          }
+        } else {
+          // Night: anywhere (surface and caves)
+          if (Math.random() < 0.55) {
+            y = surface + h / 2 + 0.05;
+          } else {
+            y = 2 + Math.random() * Math.max(1, surface - 2);
+          }
+        }
+        if (Math.abs(x + 0.5 - player.x) < 5) continue;
+        if (canSpawnEntityAt(x + 0.5, y, w, h)) {
+          return { x: x + 0.5, y };
+        }
+      }
+      return null;
+    }
+
     // Mouse placement / removal
     let mouse = { x:0, y:0 };
     let mouseButtons = { left: false, right: false };
@@ -495,6 +665,20 @@
       if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT) return;
       let acted = false;
 
+      function findHostileAtPointer() {
+        for (const mob of mobs) {
+          if (!mob.hostile || mob.health <= 0) continue;
+          const left = mob.x - mob.w / 2, right = mob.x + mob.w / 2;
+          const bottom = mob.y - mob.h / 2, top = mob.y + mob.h / 2;
+          const wx = worldPx / tileSize;
+          const wy = worldPy / tileSize;
+          const inBounds = wx >= left && wx <= right && wy >= bottom && wy <= top;
+          const inReach = Math.abs(mob.x - player.x) <= 2.4 && Math.abs(mob.y - player.y) <= 2.6;
+          if (inBounds && inReach) return mob;
+        }
+        return null;
+      }
+
       function getDoorLowerY(x, y) {
         if (world[x][y] !== 'door') return null;
         if (y > 0 && world[x][y - 1] === 'door') return y - 1;
@@ -502,6 +686,14 @@
       }
 
       if (e.button === 0 || mouseButtons.left) {
+        const hostileTarget = findHostileAtPointer();
+        if (hostileTarget && player.attackCooldown <= 0) {
+          hostileTarget.health -= 4; // Punch damage
+          player.attackCooldown = 0.28;
+          player.handActionSide = hostileTarget.x >= player.x ? 1 : -1;
+          player.handActionTimer = HAND_ACTION_DURATION;
+          return;
+        }
         // Break block
         const block = world[gx][gy];
         if (block === 'door') {
@@ -936,6 +1128,66 @@
       ctx.strokeRect(headX, headY, headW, headH);
     }
 
+    function drawZombieMob(mob, screenX, screenY, wPx, hPx, moving) {
+      const walk = moving ? Math.sin(mob.walkCycle) * (hPx * 0.05) : 0;
+      const dir = mob.facing >= 0 ? 1 : -1;
+      const headH = hPx * 0.27;
+      const bodyH = hPx * 0.4;
+      const legH = hPx * 0.33;
+      const armW = wPx * 0.24;
+      const armH = hPx * 0.33;
+      const bodyY = screenY + headH;
+      const legY = bodyY + bodyH;
+
+      ctx.fillStyle = '#4ca65a';
+      ctx.fillRect(screenX + wPx * 0.15, screenY, wPx * 0.7, headH);
+      ctx.fillStyle = '#2f6db2';
+      ctx.fillRect(screenX + wPx * 0.2, bodyY, wPx * 0.6, bodyH);
+      ctx.fillStyle = '#6b4d32';
+      ctx.fillRect(screenX + wPx * 0.2, legY + walk, wPx * 0.25, legH);
+      ctx.fillRect(screenX + wPx * 0.55, legY - walk, wPx * 0.25, legH);
+      ctx.fillStyle = '#4ca65a';
+      ctx.fillRect(screenX + (dir > 0 ? wPx * 0.02 : wPx * 0.74), bodyY + walk * 0.6, armW, armH);
+      ctx.fillRect(screenX + (dir > 0 ? wPx * 0.74 : wPx * 0.02), bodyY - walk * 0.6, armW, armH);
+      ctx.fillStyle = '#111';
+      ctx.fillRect(screenX + wPx * 0.36, screenY + headH * 0.35, wPx * 0.1, headH * 0.12);
+      ctx.fillRect(screenX + wPx * 0.54, screenY + headH * 0.35, wPx * 0.1, headH * 0.12);
+    }
+
+    function drawSkeletonMob(mob, screenX, screenY, wPx, hPx, moving) {
+      const walk = moving ? Math.sin(mob.walkCycle) * (hPx * 0.04) : 0;
+      const headH = hPx * 0.24;
+      const bodyY = screenY + headH;
+      const legY = bodyY + hPx * 0.4;
+
+      ctx.fillStyle = '#dcdcdc';
+      ctx.fillRect(screenX + wPx * 0.18, screenY, wPx * 0.64, headH);
+      ctx.fillRect(screenX + wPx * 0.4, bodyY, wPx * 0.2, hPx * 0.4);
+      ctx.fillRect(screenX + wPx * 0.18, bodyY + hPx * 0.08, wPx * 0.2, hPx * 0.36);
+      ctx.fillRect(screenX + wPx * 0.62, bodyY + hPx * 0.08, wPx * 0.2, hPx * 0.36);
+      ctx.fillRect(screenX + wPx * 0.34, legY + walk, wPx * 0.12, hPx * 0.33);
+      ctx.fillRect(screenX + wPx * 0.54, legY - walk, wPx * 0.12, hPx * 0.33);
+      ctx.fillStyle = '#111';
+      ctx.fillRect(screenX + wPx * 0.34, screenY + headH * 0.36, wPx * 0.1, headH * 0.1);
+      ctx.fillRect(screenX + wPx * 0.56, screenY + headH * 0.36, wPx * 0.1, headH * 0.1);
+    }
+
+    function drawCreeperMob(mob, screenX, screenY, wPx, hPx, moving) {
+      const walk = moving ? Math.sin(mob.walkCycle) * (hPx * 0.03) : 0;
+      ctx.fillStyle = '#4caf50';
+      ctx.fillRect(screenX + wPx * 0.12, screenY, wPx * 0.76, hPx * 0.72);
+      ctx.fillStyle = '#2f8f3a';
+      ctx.fillRect(screenX + wPx * 0.2, screenY + hPx * 0.08, wPx * 0.6, hPx * 0.16);
+      ctx.fillStyle = '#111';
+      ctx.fillRect(screenX + wPx * 0.28, screenY + hPx * 0.2, wPx * 0.14, hPx * 0.12);
+      ctx.fillRect(screenX + wPx * 0.58, screenY + hPx * 0.2, wPx * 0.14, hPx * 0.12);
+      ctx.fillRect(screenX + wPx * 0.43, screenY + hPx * 0.36, wPx * 0.14, hPx * 0.2);
+      ctx.fillRect(screenX + wPx * 0.34, screenY + hPx * 0.5, wPx * 0.32, hPx * 0.1);
+      ctx.fillStyle = '#316f35';
+      ctx.fillRect(screenX + wPx * 0.18, screenY + hPx * 0.72 + walk, wPx * 0.22, hPx * 0.28);
+      ctx.fillRect(screenX + wPx * 0.6, screenY + hPx * 0.72 - walk, wPx * 0.22, hPx * 0.28);
+    }
+
     function drawMob(mob, cam) {
       const worldPx = mob.x * tileSize;
       const worldPy = mob.y * tileSize;
@@ -945,13 +1197,56 @@
       const hPx = mob.h * tileSize;
       const moving = Math.abs(mob.vx) > 0.08;
 
-      if (mob.type === 'cow') {
+      if (mob.hostile) {
+        if (mob.type === 'zombie') drawZombieMob(mob, screenX, screenY, wPx, hPx, moving);
+        else if (mob.type === 'skeleton') drawSkeletonMob(mob, screenX, screenY, wPx, hPx, moving);
+        else drawCreeperMob(mob, screenX, screenY, wPx, hPx, moving);
+      } else if (mob.type === 'cow') {
         drawCowMob(mob, screenX, screenY, wPx, hPx, moving);
       } else if (mob.type === 'sheep') {
         drawSheepMob(mob, screenX, screenY, wPx, hPx, moving);
       } else {
         drawPigMob(mob, screenX, screenY, wPx, hPx, moving);
       }
+
+      // Health bar over hostile mobs
+      if (mob.hostile) {
+        const ratio = Math.max(0, mob.health / mob.maxHealth);
+        const barW = wPx * 0.9;
+        const barX = screenX + (wPx - barW) / 2;
+        const barY = screenY - 8;
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.fillRect(barX, barY, barW, 4);
+        ctx.fillStyle = '#e53935';
+        ctx.fillRect(barX, barY, barW * ratio, 4);
+      }
+    }
+
+    function autoSpawnHostiles(dt) {
+      const hostileCount = mobs.filter(m => m.hostile).length;
+      let mode = 'cave';
+      let cap = 8;
+      let interval = 7.5;
+
+      if (isNightTime()) {
+        mode = 'night_any';
+        cap = 26;
+        interval = 2.3;
+      } else if (weather === 'rain') {
+        mode = 'rain_day';
+        cap = 10;
+        interval = 6.0;
+      }
+
+      if (hostileCount >= cap) return;
+      hostileSpawnTimer -= dt;
+      if (hostileSpawnTimer > 0) return;
+      hostileSpawnTimer = interval * (0.7 + Math.random() * 0.7);
+
+      const types = ['zombie', 'skeleton', 'creeper'];
+      const type = types[Math.floor(Math.random() * types.length)];
+      const pos = findHostileSpawnPosition(mode, HOSTILE_TYPES[type]);
+      if (pos) spawnHostile(type, pos.x, pos.y);
     }
 
     function draw(){
@@ -1111,6 +1406,12 @@
       if (player.handActionTimer > 0) {
         player.handActionTimer = Math.max(0, player.handActionTimer - dt);
       }
+      if (player.attackCooldown > 0) {
+        player.attackCooldown = Math.max(0, player.attackCooldown - dt);
+      }
+      if (player.invulnTimer > 0) {
+        player.invulnTimer = Math.max(0, player.invulnTimer - dt);
+      }
       // Cloud drift
       for (const c of clouds) {
         c.cx += c.speed * dt * (weather === 'rain' ? 1.2 : 1.0);
@@ -1152,32 +1453,51 @@
       player.x = Math.max(0.2, Math.min(WIDTH-0.2, player.x));
       player.y = Math.max(0.2, Math.min(HEIGHT-0.2, player.y));
 
+      autoSpawnHostiles(dt);
+
       // Update mobs
-      mobs.forEach((mob, index) => {
-        // Simple AI: random movement
-        mob.moveTimer -= dt;
-        if (mob.moveTimer <= 0) {
-          mob.direction = Math.random() > 0.5 ? 1 : -1;
-          mob.moveTimer = 2 + Math.random() * 3; // Move for 2-5 seconds
+      mobs.forEach((mob) => {
+        if (mob.hostile) {
+          const dx = player.x - mob.x;
+          const dy = player.y - mob.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist < 22 && Math.abs(dy) < 6) {
+            mob.direction = dx >= 0 ? 1 : -1;
+          } else {
+            mob.moveTimer -= dt;
+            if (mob.moveTimer <= 0) {
+              mob.direction = Math.random() > 0.5 ? 1 : -1;
+              mob.moveTimer = 1.2 + Math.random() * 1.8;
+            }
+          }
+          if (mob.attackTimer > 0) mob.attackTimer = Math.max(0, mob.attackTimer - dt);
+          if (dist < 1.35 && Math.abs(dy) < 1.6 && mob.attackTimer <= 0) {
+            damagePlayer(mob.damage);
+            mob.attackTimer = mob.hitCooldown;
+          }
+        } else {
+          // Passive mob wandering
+          mob.moveTimer -= dt;
+          if (mob.moveTimer <= 0) {
+            mob.direction = Math.random() > 0.5 ? 1 : -1;
+            mob.moveTimer = 2 + Math.random() * 3;
+          }
         }
 
-        // Apply movement
         const targetVx = mob.direction * mob.speed;
-        mob.vx += (targetVx - mob.vx) * Math.min(5*dt, 1);
+        mob.vx += (targetVx - mob.vx) * Math.min(5 * dt, 1);
         if (Math.abs(mob.vx) > 0.04) mob.facing = mob.vx > 0 ? 1 : -1;
         mob.walkCycle += dt * (6 + mob.speed * 2);
         mob.idleCycle += dt * 2.4;
-        mob.vy += -25 * dt; // gravity
+        mob.vy += -25 * dt;
 
         mob.x += mob.vx * dt;
         mob.y += mob.vy * dt;
 
-        // Mob collision detection
         const eps = 1e-3;
         let left = mob.x - mob.w/2, right = mob.x + mob.w/2, bottom = mob.y - mob.h/2, top = mob.y + mob.h/2;
         const minX = Math.floor(left), maxX = Math.floor(right - eps);
         const minY = Math.floor(bottom), maxY = Math.floor(top - eps);
-        let grounded = false;
 
         for (let gx = minX; gx <= maxX; gx++){
           for (let gy = minY; gy <= maxY; gy++){
@@ -1187,22 +1507,20 @@
             const overlapY = Math.min(top, tileTop) - Math.max(bottom, tileBottom);
             if (overlapX > 0 && overlapY > 0){
               if (overlapX < overlapY){
-                // resolve X
                 if (mob.x < gx+0.5) mob.x -= overlapX + eps; else mob.x += overlapX + eps;
                 mob.vx = 0;
               } else {
-                // resolve Y
-                if (mob.y < gy+0.5){ mob.y -= overlapY + eps; mob.vy = 0; } else { mob.y += overlapY + eps; mob.vy = 0; grounded = true; }
+                if (mob.y < gy+0.5){ mob.y -= overlapY + eps; mob.vy = 0; } else { mob.y += overlapY + eps; mob.vy = 0; }
               }
               left = mob.x - mob.w/2; right = mob.x + mob.w/2; bottom = mob.y - mob.h/2; top = mob.y + mob.h/2;
             }
           }
         }
-
-        // Keep mobs in bounds
         mob.x = Math.max(0.2, Math.min(WIDTH-0.2, mob.x));
         mob.y = Math.max(0.2, Math.min(HEIGHT-0.2, mob.y));
       });
+
+      mobs = mobs.filter(m => !m.hostile || m.health > 0);
 
       draw();
       requestAnimationFrame(loop);
