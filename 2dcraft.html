@@ -260,19 +260,19 @@
       }
     }
 
-    // Post-processing: remove exposed stone blocks
+    // Post-processing: remove stone only if it's above the surface level
+    const heightMap = [];
+    for (let x = 0; x < WIDTH; x++) {
+      let h = 30;
+      h += Math.sin(x * 0.01) * 2;
+      h += Math.sin(x * 0.05) * 1;
+      heightMap[x] = Math.floor(h);
+    }
+    
     for (let x = 0; x < WIDTH; x++) {
       for (let y = 0; y < HEIGHT; y++) {
-        if (world[x][y] === 'stone') {
-          // Check if this stone block is exposed to air in any direction
-          const above = y + 1 >= HEIGHT || world[x][y + 1] === null;
-          const below = y - 1 < 0 || world[x][y - 1] === null;
-          const left = x - 1 < 0 || world[x - 1][y] === null;
-          const right = x + 1 >= WIDTH || world[x + 1][y] === null;
-          
-          if (above || below || left || right) {
-            world[x][y] = null; // Remove stone exposed to air
-          }
+        if (world[x][y] === 'stone' && y >= heightMap[x]) {
+          world[x][y] = null; // Remove stone above surface only
         }
       }
     }
