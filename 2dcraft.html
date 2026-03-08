@@ -384,6 +384,7 @@
       skeleton: { w: 0.68, h: 1.9, speed: 2.2, maxHealth: 20, damage: 2, hitCooldown: 0.75, color: '#d8d8d8' },
       creeper: { w: 0.78, h: 1.8, speed: 1.9, maxHealth: 20, damage: 4, hitCooldown: 1.1, color: '#4caf50' }
     };
+    const CREEPER_FUSE_TIME = 1.1;
     let mobs = [];
     let hostileArrows = [];
     let hostileSpawnTimer = 0;
@@ -595,6 +596,7 @@
         damage: mobType.damage,
         hitCooldown: mobType.hitCooldown,
         attackTimer: 0,
+        fuseTimer: type === 'creeper' ? -1 : 0,
         direction: Math.random() > 0.5 ? 1 : -1,
         moveTimer: 0,
         walkCycle: Math.random() * Math.PI * 2,
@@ -1216,10 +1218,17 @@
       const bodyW = wPx * 0.56;
       const bodyH = hPx * 0.46;
 
+      const fusing = mob.fuseTimer != null && mob.fuseTimer > 0;
+      const flash = fusing && Math.floor(mob.fuseTimer * 20) % 2 === 0;
+      const baseGreen = flash ? '#b8ff95' : '#67b64b';
+      const darkGreen = flash ? '#93d873' : '#4b9a3b';
+      const lightGreen = flash ? '#ccffac' : '#82c65f';
+      const legGreen = flash ? '#8fd96d' : '#4c943a';
+
       // Head
-      ctx.fillStyle = '#67b64b';
+      ctx.fillStyle = baseGreen;
       ctx.fillRect(headX, headY, headW, headH);
-      ctx.fillStyle = '#4b9a3b';
+      ctx.fillStyle = darkGreen;
       for (let y = 0; y < headH; y += pixel * 2) {
         for (let x = 0; x < headW; x += pixel * 2) {
           if (((x / pixel) + (y / pixel)) % 3 === 0) {
@@ -1238,11 +1247,11 @@
       ctx.fillRect(headX + headW * 0.54, faceY + headH * 0.5, headW * 0.12, headH * 0.16);
 
       // Base body
-      ctx.fillStyle = '#67b64b';
+      ctx.fillStyle = baseGreen;
       ctx.fillRect(bodyX, bodyY, bodyW, bodyH);
 
       // Minecraft-like green dither pattern
-      ctx.fillStyle = '#4b9a3b';
+      ctx.fillStyle = darkGreen;
       for (let y = 0; y < bodyH; y += pixel * 2) {
         for (let x = 0; x < bodyW; x += pixel * 2) {
           if (((x / pixel) + (y / pixel)) % 3 === 0) {
@@ -1250,7 +1259,7 @@
           }
         }
       }
-      ctx.fillStyle = '#82c65f';
+      ctx.fillStyle = lightGreen;
       for (let y = pixel; y < bodyH; y += pixel * 3) {
         for (let x = pixel; x < bodyW; x += pixel * 3) {
           if (((x / pixel) + (y / pixel)) % 2 === 0) {
@@ -1263,7 +1272,7 @@
       const legW = bodyW * 0.19;
       const legH = hPx * 0.22;
       const legY = bodyY + bodyH - pixel * 0.3;
-      ctx.fillStyle = '#4c943a';
+      ctx.fillStyle = legGreen;
       ctx.fillRect(bodyX + bodyW * 0.02, legY + walk, legW, legH);
       ctx.fillRect(bodyX + bodyW * 0.29, legY - walk, legW, legH);
       ctx.fillRect(bodyX + bodyW * 0.56, legY + walk, legW, legH);
@@ -1609,7 +1618,27 @@
             }
           }
           if (mob.attackTimer > 0) mob.attackTimer = Math.max(0, mob.attackTimer - dt);
-          if (dist < 1.35 && Math.abs(dy) < 1.6 && mob.attackTimer <= 0) {
+          if (mob.type === 'creeper') {
+            if (dist < 2.1 && Math.abs(dy) < 1.9) {
+              if (mob.fuseTimer < 0) mob.fuseTimer = CREEPER_FUSE_TIME;
+            } else {
+              mob.fuseTimer = -1;
+            }
+
+            if (mob.fuseTimer > 0) {
+              mob.fuseTimer -= dt;
+              if (mob.fuseTimer <= 0) {
+                // Creeper dies on explosion; player dies if within blast radius.
+                if (Math.hypot(player.x - mob.x, player.y - mob.y) < 2.8) {
+                  player.health = 0;
+                  updateHealthUI();
+                  respawnPlayer();
+                }
+                mob.health = 0;
+                return;
+              }
+            }
+          } else if (dist < 1.35 && Math.abs(dy) < 1.6 && mob.attackTimer <= 0) {
             damagePlayer(mob.damage);
             mob.attackTimer = mob.hitCooldown;
           }
