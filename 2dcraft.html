@@ -269,6 +269,7 @@
       speed: 6,
       w: 0.6,
       h: 2.0,
+      model: 'steve',
       facing: 1,
       walkCycle: 0,
       grounded: false,
@@ -294,17 +295,39 @@
     window.addEventListener('keydown', e=>{ if (e.code==='KeyA' || e.code==='ArrowLeft') keys.left=true; if (e.code==='KeyD' || e.code==='ArrowRight') keys.right=true; if (e.code==='Space' || e.code==='KeyW' || e.code==='ArrowUp') keys.jump=true; if (e.code==='KeyS' || e.code==='ArrowDown') keys.down=true; const n = parseInt(e.key,10); if (!Number.isNaN(n) && n>=1 && n<=BLOCKS.length){ selected = n-1; renderHotbar(); } });
     window.addEventListener('keyup', e=>{ if (e.code==='KeyA' || e.code==='ArrowLeft') keys.left=false; if (e.code==='KeyD' || e.code==='ArrowRight') keys.right=false; if (e.code==='Space' || e.code==='KeyW' || e.code==='ArrowUp') keys.jump=false; if (e.code==='KeyS' || e.code==='ArrowDown') keys.down=false; });
 
-    // Show fixed Steve skin indicator
+    // Skin selector (Steve / Alex)
     const skinSelector = document.getElementById('skinSelector');
-    const steveLabel = document.createElement('div');
-    steveLabel.textContent = 'Steve';
-    steveLabel.style.color = 'rgba(255,255,255,.9)';
-    steveLabel.style.fontSize = '11px';
-    steveLabel.style.padding = '3px 6px';
-    steveLabel.style.border = '1px solid rgba(255,255,255,.25)';
-    steveLabel.style.borderRadius = '6px';
-    steveLabel.style.background = 'rgba(255,255,255,.08)';
-    skinSelector.appendChild(steveLabel);
+    function createSkinButton(label, modelId) {
+      const btn = document.createElement('button');
+      btn.textContent = label;
+      btn.style.color = 'rgba(255,255,255,.95)';
+      btn.style.fontSize = '11px';
+      btn.style.padding = '4px 8px';
+      btn.style.border = '1px solid rgba(255,255,255,.25)';
+      btn.style.borderRadius = '6px';
+      btn.style.background = 'rgba(255,255,255,.08)';
+      btn.style.cursor = 'pointer';
+      btn.onclick = () => {
+        player.model = modelId;
+        updateSkinSelector();
+      };
+      btn.dataset.model = modelId;
+      skinSelector.appendChild(btn);
+      return btn;
+    }
+
+    createSkinButton('Steve', 'steve');
+    createSkinButton('Alex', 'alex');
+
+    function updateSkinSelector() {
+      const buttons = skinSelector.querySelectorAll('button[data-model]');
+      buttons.forEach(btn => {
+        const isSelected = btn.dataset.model === player.model;
+        btn.style.border = isSelected ? '1px solid rgba(255,255,255,.9)' : '1px solid rgba(255,255,255,.25)';
+        btn.style.background = isSelected ? 'rgba(255,255,255,.22)' : 'rgba(255,255,255,.08)';
+      });
+    }
+    updateSkinSelector();
 
     // Time and weather controls
     document.getElementById('timeDay').onclick = () => { gameTime = 6000; }; // Day time
@@ -616,6 +639,73 @@
       ctx.strokeRect(bodyX + bodyW - limbW, bodyY + bodyH - legSwing, limbW, limbH);
     }
 
+    function drawAlex(screenX, screenY, pixel, facing, walkCycle, moving) {
+      const dir = facing >= 0 ? 1 : -1;
+      const legSwing = moving ? Math.sin(walkCycle) * pixel * 0.9 : 0;
+      const armSwing = moving ? -Math.sin(walkCycle) * pixel * 0.8 : 0;
+      const actionProgress = player.handActionTimer > 0
+        ? 1 - (player.handActionTimer / HAND_ACTION_DURATION)
+        : 0;
+      const actionLift = player.handActionTimer > 0
+        ? Math.sin(actionProgress * Math.PI) * pixel * 3.2
+        : 0;
+
+      const headW = 8 * pixel, headH = 8 * pixel;
+      const bodyW = 8 * pixel, bodyH = 12 * pixel;
+      const armW = 3 * pixel, armH = 12 * pixel; // Alex has slimmer arms
+      const legW = 4 * pixel, legH = 12 * pixel;
+
+      const spriteW = 16 * pixel;
+      const centerX = screenX + (player.w * tileSize) / 2;
+      const leftX = centerX - spriteW / 2;
+      const headX = leftX + 4 * pixel;
+      const headY = screenY;
+      const bodyX = leftX + 4 * pixel;
+      const bodyY = headY + headH;
+
+      // Head + hair
+      ctx.fillStyle = '#b1612f';
+      ctx.fillRect(headX, headY, headW, 2 * pixel);
+      ctx.fillStyle = '#dfb691';
+      ctx.fillRect(headX, headY + 2 * pixel, headW, 6 * pixel);
+      // Eyes
+      ctx.fillStyle = '#f2f6ff';
+      ctx.fillRect(headX + pixel, headY + 4 * pixel, pixel, 2 * pixel);
+      ctx.fillRect(headX + 6 * pixel, headY + 4 * pixel, pixel, 2 * pixel);
+      ctx.fillStyle = '#4a9b7e';
+      ctx.fillRect(headX + 2 * pixel, headY + 4 * pixel, pixel, 2 * pixel);
+      ctx.fillRect(headX + 5 * pixel, headY + 4 * pixel, pixel, 2 * pixel);
+
+      // Torso and arms
+      ctx.fillStyle = '#8cbf6f';
+      ctx.fillRect(bodyX, bodyY, bodyW, bodyH);
+      const sleeveHeight = 4 * pixel;
+      const leftArmY = bodyY + armSwing + (player.handActionSide < 0 ? -actionLift : 0);
+      const rightArmY = bodyY - armSwing + (player.handActionSide > 0 ? -actionLift : 0);
+      ctx.fillStyle = '#8cbf6f';
+      ctx.fillRect(bodyX - armW, leftArmY, armW, sleeveHeight);
+      ctx.fillRect(bodyX + bodyW, rightArmY, armW, sleeveHeight);
+      ctx.fillStyle = '#dfb691';
+      ctx.fillRect(bodyX - armW, leftArmY + sleeveHeight, armW, armH - sleeveHeight);
+      ctx.fillRect(bodyX + bodyW, rightArmY + sleeveHeight, armW, armH - sleeveHeight);
+
+      // Pants/legs
+      ctx.fillStyle = '#6b4f8d';
+      ctx.fillRect(bodyX, bodyY + bodyH - 2 * pixel, bodyW, 2 * pixel);
+      ctx.fillRect(bodyX, bodyY + bodyH + legSwing, legW, legH);
+      ctx.fillRect(bodyX + bodyW - legW, bodyY + bodyH - legSwing, legW, legH);
+
+      // Outline
+      ctx.strokeStyle = '#101010';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(headX, headY, headW, headH);
+      ctx.strokeRect(bodyX, bodyY, bodyW, bodyH);
+      ctx.strokeRect(bodyX - armW, leftArmY, armW, armH);
+      ctx.strokeRect(bodyX + bodyW, rightArmY, armW, armH);
+      ctx.strokeRect(bodyX, bodyY + bodyH + legSwing, legW, legH);
+      ctx.strokeRect(bodyX + bodyW - legW, bodyY + bodyH - legSwing, legW, legH);
+    }
+
     function drawMobLegs(legBaseY, legH, legW, leftLegX, rightLegX, swing, color) {
       ctx.fillStyle = color;
       ctx.fillRect(leftLegX, legBaseY + swing, legW, legH);
@@ -841,8 +931,12 @@
       const screenY = canvas.height - (worldPy - cam.y) - (player.h*tileSize)/2;
 
       const moving = Math.abs(player.vx) > 0.15 && player.grounded;
-      const stevePixel = (player.h * tileSize) / 32;
-      drawSteve(screenX, screenY, stevePixel, player.facing, player.walkCycle, moving);
+      const charPixel = (player.h * tileSize) / 32;
+      if (player.model === 'alex') {
+        drawAlex(screenX, screenY, charPixel, player.facing, player.walkCycle, moving);
+      } else {
+        drawSteve(screenX, screenY, charPixel, player.facing, player.walkCycle, moving);
+      }
 
       // highlight mouse tile
       const cam2 = getCameraOffset();
