@@ -181,8 +181,8 @@
               world[x][y] = 'grass'; // Grass covering the surface
             } else if (depthFromSurface <= 4) {
               world[x][y] = 'dirt'; // Dirt layer below grass
-            } else if (depthFromSurface > 8) {
-              world[x][y] = 'stone'; // Stone from 9+ blocks deep
+            } else if (depthFromSurface > 12) {
+              world[x][y] = 'stone'; // Stone from 13+ blocks deep
             } else {
               world[x][y] = 'dirt'; // Fill remaining depths with dirt
             }
@@ -199,7 +199,7 @@
       for (let i = 0; i < 30; i++) {
         const caveX = Math.floor(Math.random() * WIDTH);
         const caveY = Math.floor(Math.random() * 15) + 8; // Near surface
-        const caveSize = Math.floor(Math.random() * 6) + 3;
+        const caveSize = Math.floor(Math.random() * 8) + 5;
 
         for (let dx = -caveSize; dx <= caveSize; dx++) {
           for (let dy = -caveSize; dy <= caveSize; dy++) {
@@ -224,7 +224,7 @@
       for (let i = 0; i < 40; i++) {
         const caveX = Math.floor(Math.random() * WIDTH);
         const caveY = Math.floor(Math.random() * 15) + 25; // Deep underground but not near bedrock
-        const caveSize = Math.floor(Math.random() * 6) + 3;
+        const caveSize = Math.floor(Math.random() * 10) + 6;
 
         for (let dx = -caveSize; dx <= caveSize; dx++) {
           for (let dy = -caveSize; dy <= caveSize; dy++) {
