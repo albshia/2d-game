@@ -327,7 +327,7 @@
         const heightTiles = rows * cell;
         clouds.push({
           cx: Math.random() * (WIDTH + 16) - 8,
-          cy: HEIGHT * 0.82 + Math.random() * (HEIGHT * 0.12),
+          cy: HEIGHT * 0.72 + Math.random() * (HEIGHT * 0.24),
           speed: 0.28 + Math.random() * 0.44, // tiles per second
           cols,
           rows,
@@ -1065,7 +1065,7 @@
         c.cx += c.speed * dt * (weather === 'rain' ? 1.2 : 1.0);
         if (c.cx - c.widthTiles / 2 > WIDTH + 8) {
           c.cx = -8 - c.widthTiles / 2;
-          c.cy = HEIGHT * 0.82 + Math.random() * (HEIGHT * 0.12);
+          c.cy = HEIGHT * 0.72 + Math.random() * (HEIGHT * 0.24);
         }
       }
       let ax = 0;
