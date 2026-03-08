@@ -366,7 +366,8 @@
       maxHealth: 20,
       health: 20,
       invulnTimer: 0,
-      attackCooldown: 0
+      attackCooldown: 0,
+      hurtTimer: 0
     };
     let spawnPoint = { x: spawn.x, y: spawn.y };
     const PLAYER_COLLIDER_H = 1.9;
@@ -410,12 +411,19 @@
 
     function damagePlayer(amount) {
       if (player.invulnTimer > 0) return;
+      player.hurtTimer = 0.25;
       player.health = Math.max(0, player.health - amount);
       player.invulnTimer = 0.45;
       updateHealthUI();
       if (player.health <= 0) {
         respawnPlayer();
       }
+    }
+
+    function damageMob(mob, amount) {
+      if (!mob || mob.health == null || mob.health <= 0) return;
+      mob.hurtTimer = 0.25;
+      mob.health -= amount;
     }
 
     function isNightTime() {
@@ -598,7 +606,8 @@
         moveTimer: 0,
         walkCycle: Math.random() * Math.PI * 2,
         idleCycle: Math.random() * Math.PI * 2,
-        facing: Math.random() > 0.5 ? 1 : -1
+        facing: Math.random() > 0.5 ? 1 : -1,
+        hurtTimer: 0
       };
       mobs.push(mob);
     }
@@ -626,7 +635,8 @@
         walkCycle: Math.random() * Math.PI * 2,
         idleCycle: Math.random() * Math.PI * 2,
         facing: Math.random() > 0.5 ? 1 : -1,
-        tint: mobType.color
+        tint: mobType.color,
+        hurtTimer: 0
       });
     }
 
@@ -752,7 +762,7 @@
       if (e.button === 0 || mouseButtons.left) {
         const hostileTarget = findHostileAtPointer();
         if (hostileTarget && player.attackCooldown <= 0) {
-          hostileTarget.health -= 4; // Punch damage
+          damageMob(hostileTarget, 4); // Punch damage
           player.attackCooldown = 0.28;
           player.handActionSide = hostileTarget.x >= player.x ? 1 : -1;
           player.handActionTimer = HAND_ACTION_DURATION;
@@ -1363,6 +1373,12 @@
         ctx.fillStyle = '#e53935';
         ctx.fillRect(barX, barY, barW * ratio, 4);
       }
+
+      // Red hurt flash
+      if (mob.hurtTimer > 0) {
+        ctx.fillStyle = 'rgba(255, 45, 45, 0.35)';
+        ctx.fillRect(screenX, screenY, wPx, hPx);
+      }
     }
 
     function autoSpawnHostiles(dt) {
@@ -1508,6 +1524,10 @@
       } else {
         drawSteve(screenX, screenY, charPixel, player.facing, player.walkCycle, moving);
       }
+      if (player.hurtTimer > 0) {
+        ctx.fillStyle = 'rgba(255, 45, 45, 0.35)';
+        ctx.fillRect(screenX, screenY, player.w * tileSize, player.h * tileSize);
+      }
 
       // highlight mouse tile
       const cam2 = getCameraOffset();
@@ -1567,6 +1587,9 @@
       }
       if (player.invulnTimer > 0) {
         player.invulnTimer = Math.max(0, player.invulnTimer - dt);
+      }
+      if (player.hurtTimer > 0) {
+        player.hurtTimer = Math.max(0, player.hurtTimer - dt);
       }
       // Cloud drift
       for (const c of clouds) {
@@ -1696,6 +1719,9 @@
             mob.direction = Math.random() > 0.5 ? 1 : -1;
             mob.moveTimer = 2 + Math.random() * 3;
           }
+        }
+        if (mob.hurtTimer > 0) {
+          mob.hurtTimer = Math.max(0, mob.hurtTimer - dt);
         }
 
         const targetVx = mob.direction * mob.speed;
