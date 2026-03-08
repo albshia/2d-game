@@ -265,19 +265,14 @@
       }
     }
 
-    // Post-processing: remove stone blocks that are above the surface
-    const heightMap = [];
-    for (let x = 0; x < WIDTH; x++) {
-      let h = 30;
-      h += Math.sin(x * 0.01) * 2;
-      h += Math.sin(x * 0.05) * 1;
-      heightMap[x] = Math.floor(h);
-    }
-    
+    // Post-processing: remove exposed stone blocks above terrain
     for (let x = 0; x < WIDTH; x++) {
       for (let y = 0; y < HEIGHT; y++) {
-        if (world[x][y] === 'stone' && y >= heightMap[x]) {
-          world[x][y] = null; // Remove stone above surface
+        if (world[x][y] === 'stone') {
+          // Check if stone is exposed (has air/null above it)
+          if (y + 1 >= HEIGHT || world[x][y + 1] === null) {
+            world[x][y] = null; // Remove exposed stone
+          }
         }
       }
     }
