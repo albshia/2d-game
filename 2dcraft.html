@@ -534,12 +534,13 @@
       ctx.fillRect(headX, headY, headW, 2 * pixel);
       ctx.fillStyle = '#ddb289';
       ctx.fillRect(headX, headY + 2 * pixel, headW, 6 * pixel);
-      ctx.fillStyle = '#3f7fae';
-      ctx.fillRect(headX + pixel, headY + 4 * pixel, 3 * pixel, 2 * pixel);
-      ctx.fillRect(headX + 5 * pixel, headY + 4 * pixel, 3 * pixel, 2 * pixel);
-      ctx.fillStyle = '#18324f';
-      ctx.fillRect(headX + 2 * pixel, headY + 5 * pixel, pixel, pixel);
-      ctx.fillRect(headX + 6 * pixel, headY + 5 * pixel, pixel, pixel);
+      // Eyes: outer halves white, inner halves purple
+      ctx.fillStyle = '#f2f6ff';
+      ctx.fillRect(headX + pixel, headY + 4 * pixel, 2 * pixel, 2 * pixel); // Left eye outer
+      ctx.fillRect(headX + 6 * pixel, headY + 4 * pixel, 2 * pixel, 2 * pixel); // Right eye outer
+      ctx.fillStyle = '#8c4fcf';
+      ctx.fillRect(headX + 3 * pixel, headY + 4 * pixel, pixel, 2 * pixel); // Left eye inner
+      ctx.fillRect(headX + 5 * pixel, headY + 4 * pixel, pixel, 2 * pixel); // Right eye inner
 
       // Torso and arms
       ctx.fillStyle = '#4aa3df';
