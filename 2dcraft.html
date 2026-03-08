@@ -633,6 +633,28 @@
       return true;
     }
 
+    function isMobGrounded(mob) {
+      const eps = 1e-4;
+      const left = Math.floor(mob.x - mob.w / 2 + eps);
+      const right = Math.floor(mob.x + mob.w / 2 - eps);
+      const below = Math.floor(mob.y - mob.h / 2 - eps);
+      for (let gx = left; gx <= right; gx++) {
+        if (isSolid(gx, below)) return true;
+      }
+      return false;
+    }
+
+    function shouldMobStepJump(mob) {
+      if (Math.abs(mob.vx) < 0.08) return false;
+      const dir = mob.vx > 0 ? 1 : -1;
+      const frontX = mob.x + dir * (mob.w / 2 + 0.08);
+      const gx = Math.floor(frontX);
+      const footY = mob.y - mob.h / 2;
+      const gyFoot = Math.floor(footY + 0.08);
+      const gyHead = gyFoot + 1; // one block above foot level
+      return isSolid(gx, gyFoot) && !isSolid(gx, gyHead);
+    }
+
     function findHostileSpawnPosition(mode, hostileType) {
       const w = hostileType.w;
       const h = hostileType.h;
@@ -1656,6 +1678,9 @@
         if (Math.abs(mob.vx) > 0.04) mob.facing = mob.vx > 0 ? 1 : -1;
         mob.walkCycle += dt * (6 + mob.speed * 2);
         mob.idleCycle += dt * 2.4;
+        if (isMobGrounded(mob) && shouldMobStepJump(mob)) {
+          mob.vy = Math.max(mob.vy, 8.2);
+        }
         mob.vy += -25 * dt;
 
         mob.x += mob.vx * dt;
