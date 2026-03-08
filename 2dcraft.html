@@ -251,7 +251,7 @@
       // Generate bigger caverns with irregular shapes.
       for (let i = 0; i < 14; i++) {
         const caveX = Math.floor(Math.random() * WIDTH);
-        const caveDepth = 18 + Math.random() * 45; // 18-63 blocks below local surface
+        const caveDepth = 12 + Math.random() * 24; // 12-36 blocks below local surface (shallower caves)
         const caveY = Math.max(3, Math.floor(heightMap[caveX] - caveDepth));
         const baseR = 10 + Math.random() * 12; // big caves
         const blobCount = 4 + Math.floor(Math.random() * 5);
