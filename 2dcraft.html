@@ -280,9 +280,9 @@
 
     // Mob system
     const MOB_TYPES = {
-      cow: { color: '#8B4513', w: 0.8, h: 0.6, speed: 1 },
-      sheep: { color: '#FFFFFF', w: 0.7, h: 0.5, speed: 0.8 },
-      pig: { color: '#FFC0CB', w: 0.6, h: 0.5, speed: 1.2 }
+      cow: { w: 1.35, h: 1.1, speed: 1.0 },
+      sheep: { w: 1.15, h: 1.0, speed: 0.85 },
+      pig: { w: 1.1, h: 0.9, speed: 1.2 }
     };
     let mobs = [];
 
@@ -350,9 +350,11 @@
         w: mobType.w,
         h: mobType.h,
         speed: mobType.speed,
-        color: mobType.color,
         direction: Math.random() > 0.5 ? 1 : -1,
-        moveTimer: 0
+        moveTimer: 0,
+        walkCycle: Math.random() * Math.PI * 2,
+        idleCycle: Math.random() * Math.PI * 2,
+        facing: Math.random() > 0.5 ? 1 : -1
       };
       mobs.push(mob);
     }
@@ -614,6 +616,155 @@
       ctx.strokeRect(bodyX + bodyW - limbW, bodyY + bodyH - legSwing, limbW, limbH);
     }
 
+    function drawMobLegs(legBaseY, legH, legW, leftLegX, rightLegX, swing, color) {
+      ctx.fillStyle = color;
+      ctx.fillRect(leftLegX, legBaseY + swing, legW, legH);
+      ctx.fillRect(rightLegX, legBaseY - swing, legW, legH);
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+      ctx.strokeRect(leftLegX, legBaseY + swing, legW, legH);
+      ctx.strokeRect(rightLegX, legBaseY - swing, legW, legH);
+    }
+
+    function drawCowMob(mob, screenX, screenY, wPx, hPx, moving) {
+      const walk = moving ? Math.sin(mob.walkCycle) * (hPx * 0.04) : 0;
+      const headBob = moving ? Math.abs(Math.sin(mob.walkCycle * 1.2)) * (hPx * 0.03) : Math.sin(mob.idleCycle) * (hPx * 0.015);
+      const dir = mob.facing >= 0 ? 1 : -1;
+
+      const bodyW = wPx * 0.7, bodyH = hPx * 0.46;
+      const bodyX = screenX + (wPx - bodyW) * 0.48;
+      const bodyY = screenY + hPx * 0.38;
+      const legW = wPx * 0.12, legH = hPx * 0.3;
+      const legY = bodyY + bodyH - hPx * 0.02;
+
+      drawMobLegs(legY, legH, legW, bodyX + wPx * 0.02, bodyX + bodyW - legW - wPx * 0.02, walk, '#3b2618');
+
+      ctx.fillStyle = '#5d3b28';
+      ctx.fillRect(bodyX, bodyY, bodyW, bodyH);
+      ctx.fillStyle = '#f3f3f3';
+      ctx.fillRect(bodyX + bodyW * 0.2, bodyY + bodyH * 0.18, bodyW * 0.2, bodyH * 0.24);
+      ctx.fillRect(bodyX + bodyW * 0.58, bodyY + bodyH * 0.48, bodyW * 0.18, bodyH * 0.22);
+
+      const headW = wPx * 0.27, headH = hPx * 0.27;
+      const headX = dir > 0 ? bodyX + bodyW - headW * 0.18 : bodyX - headW * 0.82;
+      const headY = bodyY + hPx * 0.04 + headBob;
+      ctx.fillStyle = '#5d3b28';
+      ctx.fillRect(headX, headY, headW, headH);
+      ctx.fillStyle = '#f0c5b5';
+      ctx.fillRect(headX + headW * 0.12, headY + headH * 0.55, headW * 0.76, headH * 0.35);
+      ctx.fillStyle = '#111';
+      ctx.fillRect(headX + (dir > 0 ? headW * 0.62 : headW * 0.2), headY + headH * 0.32, headW * 0.12, headH * 0.12);
+
+      // Horns and tail
+      ctx.fillStyle = '#ccb088';
+      ctx.fillRect(headX + headW * 0.05, headY - headH * 0.13, headW * 0.16, headH * 0.12);
+      ctx.fillRect(headX + headW * 0.79, headY - headH * 0.13, headW * 0.16, headH * 0.12);
+      const tailX = dir > 0 ? bodyX - wPx * 0.04 : bodyX + bodyW;
+      ctx.strokeStyle = '#3b2618';
+      ctx.lineWidth = Math.max(1, wPx * 0.015);
+      ctx.beginPath();
+      ctx.moveTo(tailX, bodyY + bodyH * 0.35);
+      ctx.lineTo(tailX - dir * wPx * 0.08, bodyY + bodyH * 0.48 + walk * 0.8);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#1a1a1a';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bodyX, bodyY, bodyW, bodyH);
+      ctx.strokeRect(headX, headY, headW, headH);
+    }
+
+    function drawSheepMob(mob, screenX, screenY, wPx, hPx, moving) {
+      const walk = moving ? Math.sin(mob.walkCycle) * (hPx * 0.035) : 0;
+      const headBob = moving ? Math.abs(Math.sin(mob.walkCycle)) * (hPx * 0.02) : Math.sin(mob.idleCycle) * (hPx * 0.012);
+      const dir = mob.facing >= 0 ? 1 : -1;
+
+      const bodyW = wPx * 0.74, bodyH = hPx * 0.52;
+      const bodyX = screenX + (wPx - bodyW) * 0.46;
+      const bodyY = screenY + hPx * 0.32;
+      const legW = wPx * 0.11, legH = hPx * 0.28;
+      const legY = bodyY + bodyH - hPx * 0.02;
+
+      drawMobLegs(legY, legH, legW, bodyX + wPx * 0.03, bodyX + bodyW - legW - wPx * 0.03, walk, '#53453d');
+
+      // Wool body
+      ctx.fillStyle = '#f4f4f4';
+      ctx.fillRect(bodyX, bodyY, bodyW, bodyH);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(bodyX + bodyW * 0.08, bodyY + bodyH * 0.08, bodyW * 0.82, bodyH * 0.65);
+
+      const headW = wPx * 0.24, headH = hPx * 0.24;
+      const headX = dir > 0 ? bodyX + bodyW - headW * 0.05 : bodyX - headW * 0.95;
+      const headY = bodyY + hPx * 0.14 + headBob;
+      ctx.fillStyle = '#4b3d35';
+      ctx.fillRect(headX, headY, headW, headH);
+      ctx.fillStyle = '#111';
+      ctx.fillRect(headX + (dir > 0 ? headW * 0.62 : headW * 0.22), headY + headH * 0.34, headW * 0.12, headH * 0.12);
+
+      ctx.strokeStyle = '#1a1a1a';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bodyX, bodyY, bodyW, bodyH);
+      ctx.strokeRect(headX, headY, headW, headH);
+    }
+
+    function drawPigMob(mob, screenX, screenY, wPx, hPx, moving) {
+      const walk = moving ? Math.sin(mob.walkCycle) * (hPx * 0.04) : 0;
+      const headBob = moving ? Math.abs(Math.sin(mob.walkCycle * 1.1)) * (hPx * 0.02) : Math.sin(mob.idleCycle) * (hPx * 0.013);
+      const dir = mob.facing >= 0 ? 1 : -1;
+
+      const bodyW = wPx * 0.72, bodyH = hPx * 0.5;
+      const bodyX = screenX + (wPx - bodyW) * 0.45;
+      const bodyY = screenY + hPx * 0.34;
+      const legW = wPx * 0.11, legH = hPx * 0.27;
+      const legY = bodyY + bodyH - hPx * 0.02;
+
+      drawMobLegs(legY, legH, legW, bodyX + wPx * 0.04, bodyX + bodyW - legW - wPx * 0.04, walk, '#b66f8c');
+
+      ctx.fillStyle = '#f0a9c0';
+      ctx.fillRect(bodyX, bodyY, bodyW, bodyH);
+      ctx.fillStyle = '#f7bed0';
+      ctx.fillRect(bodyX + bodyW * 0.08, bodyY + bodyH * 0.15, bodyW * 0.75, bodyH * 0.45);
+
+      const headW = wPx * 0.26, headH = hPx * 0.24;
+      const headX = dir > 0 ? bodyX + bodyW - headW * 0.02 : bodyX - headW * 0.98;
+      const headY = bodyY + hPx * 0.14 + headBob;
+      ctx.fillStyle = '#f0a9c0';
+      ctx.fillRect(headX, headY, headW, headH);
+      ctx.fillStyle = '#d98ca7';
+      ctx.fillRect(headX + headW * 0.2, headY + headH * 0.55, headW * 0.6, headH * 0.32);
+      ctx.fillStyle = '#111';
+      ctx.fillRect(headX + (dir > 0 ? headW * 0.62 : headW * 0.22), headY + headH * 0.32, headW * 0.12, headH * 0.12);
+
+      // Curly tail
+      const tailX = dir > 0 ? bodyX - wPx * 0.03 : bodyX + bodyW + wPx * 0.03;
+      ctx.strokeStyle = '#cf7f9f';
+      ctx.lineWidth = Math.max(1, wPx * 0.02);
+      ctx.beginPath();
+      ctx.arc(tailX, bodyY + bodyH * 0.45, wPx * 0.04, 0, Math.PI * 1.7);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#1a1a1a';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bodyX, bodyY, bodyW, bodyH);
+      ctx.strokeRect(headX, headY, headW, headH);
+    }
+
+    function drawMob(mob, cam) {
+      const worldPx = mob.x * tileSize;
+      const worldPy = mob.y * tileSize;
+      const screenX = worldPx - cam.x - (mob.w * tileSize) / 2;
+      const screenY = canvas.height - (worldPy - cam.y) - (mob.h * tileSize) / 2;
+      const wPx = mob.w * tileSize;
+      const hPx = mob.h * tileSize;
+      const moving = Math.abs(mob.vx) > 0.08;
+
+      if (mob.type === 'cow') {
+        drawCowMob(mob, screenX, screenY, wPx, hPx, moving);
+      } else if (mob.type === 'sheep') {
+        drawSheepMob(mob, screenX, screenY, wPx, hPx, moving);
+      } else {
+        drawPigMob(mob, screenX, screenY, wPx, hPx, moving);
+      }
+    }
+
     function draw(){
       // Update time
       gameTime = (gameTime + timeSpeed) % 24000;
@@ -680,15 +831,7 @@
 
       // Render mobs
       mobs.forEach(mob => {
-        const worldPx = mob.x * tileSize;
-        const worldPy = mob.y * tileSize;
-        const screenX = worldPx - cam.x - (mob.w*tileSize)/2;
-        const screenY = canvas.height - (worldPy - cam.y) - (mob.h*tileSize)/2;
-        ctx.fillStyle = mob.color;
-        ctx.fillRect(screenX, screenY, mob.w*tileSize, mob.h*tileSize);
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(screenX, screenY, mob.w*tileSize, mob.h*tileSize);
+        drawMob(mob, cam);
       });
 
       // player
@@ -799,6 +942,9 @@
         // Apply movement
         const targetVx = mob.direction * mob.speed;
         mob.vx += (targetVx - mob.vx) * Math.min(5*dt, 1);
+        if (Math.abs(mob.vx) > 0.04) mob.facing = mob.vx > 0 ? 1 : -1;
+        mob.walkCycle += dt * (6 + mob.speed * 2);
+        mob.idleCycle += dt * 2.4;
         mob.vy += -25 * dt; // gravity
 
         mob.x += mob.vx * dt;
