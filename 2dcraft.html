@@ -206,11 +206,14 @@
             const nx = caveX + dx, ny = caveY + dy;
             const distance = Math.sqrt(dx*dx + dy*dy);
             if (nx >= 0 && nx < WIDTH && ny >= 0 && ny < HEIGHT && distance <= caveSize && world[nx][ny] !== 'bedrock') {
-              // Carve hollow center, leave stone walls
-              if (distance <= caveSize * 0.6) {
-                world[nx][ny] = null; // Hollow interior
-              } else if (Math.random() > 0.3) {
-                world[nx][ny] = 'stone'; // Stone formations
+              // Only carve if below surface
+              if (ny < heightMap[nx]) {
+                // Carve hollow center, leave stone walls
+                if (distance <= caveSize * 0.6) {
+                  world[nx][ny] = null; // Hollow interior
+                } else if (Math.random() > 0.3) {
+                  world[nx][ny] = 'stone'; // Stone formations
+                }
               }
             }
           }
@@ -228,11 +231,19 @@
             const nx = caveX + dx, ny = caveY + dy;
             const distance = Math.sqrt(dx*dx + dy*dy);
             if (nx >= 0 && nx < WIDTH && ny >= 0 && ny < HEIGHT && distance <= caveSize && world[nx][ny] !== 'bedrock') {
-              // Carve hollow center, leave stone walls
-              if (distance <= caveSize * 0.6) {
-                world[nx][ny] = null; // Hollow interior
-              } else if (Math.random() > 0.3) {
-                world[nx][ny] = 'stone'; // Stone formations
+              // Only carve if below surface
+              if (ny < heightMap[nx]) {
+                // Carve hollow center, leave stone walls
+                if (distance <= caveSize * 0.6) {
+                  world[nx][ny] = null; // Hollow interior
+                } else if (Math.random() > 0.3) {
+                  world[nx][ny] = 'stone'; // Stone formations
+                }
+              }
+            }
+          }
+        }
+      }
               }
             }
           }
