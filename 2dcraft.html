@@ -319,14 +319,14 @@
       clouds = [];
       const count = 34;
       for (let i = 0; i < count; i++) {
-        const cols = 6 + Math.floor(Math.random() * 7);   // 6-12
-        const rows = 3 + Math.floor(Math.random() * 3);   // 3-5
-        const pixel = 5 + Math.floor(Math.random() * 5);  // 5-9 px cloud blocks
+        const cols = 9 + Math.floor(Math.random() * 8);   // 9-16
+        const rows = 4 + Math.floor(Math.random() * 4);   // 4-7
+        const pixel = 7 + Math.floor(Math.random() * 7);  // 7-13 px cloud blocks
         const seed = Math.random() * 10000;
         const width = cols * pixel;
         clouds.push({
           x: Math.random() * (innerWidth + 500) - 250,
-          y: 22 + Math.random() * (innerHeight * 0.32),
+          y: 8 + Math.random() * (innerHeight * 0.2),
           speed: 7 + Math.random() * 13,
           cols,
           rows,
@@ -1058,7 +1058,7 @@
         c.x += c.speed * dt * (weather === 'rain' ? 1.2 : 1.0);
         if (c.x > canvas.width + 120) {
           c.x = -c.width - 80 - Math.random() * 160;
-          c.y = 22 + Math.random() * (canvas.height * 0.32);
+          c.y = 8 + Math.random() * (canvas.height * 0.2);
         }
       }
       let ax = 0;
