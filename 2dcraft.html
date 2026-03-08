@@ -195,8 +195,25 @@
         world[x][HEIGHT - 1] = 'stone';
       }
 
-      // Generate caves deep underground (below depth 30)
-      for (let i = 0; i < 50; i++) {
+      // Generate exposed caves (near surface, 8-25 depth)
+      for (let i = 0; i < 30; i++) {
+        const caveX = Math.floor(Math.random() * WIDTH);
+        const caveY = Math.floor(Math.random() * 15) + 8; // Near surface
+        const caveSize = Math.floor(Math.random() * 6) + 3;
+
+        for (let dx = -caveSize; dx <= caveSize; dx++) {
+          for (let dy = -caveSize; dy <= caveSize; dy++) {
+            const nx = caveX + dx, ny = caveY + dy;
+            const distance = Math.sqrt(dx*dx + dy*dy);
+            if (nx >= 0 && nx < WIDTH && ny >= 0 && ny < HEIGHT && distance <= caveSize && world[nx][ny] !== 'bedrock') {
+              world[nx][ny] = null; // Carve out cave
+            }
+          }
+        }
+      }
+
+      // Generate deep underground caves (below depth 30)
+      for (let i = 0; i < 40; i++) {
         const caveX = Math.floor(Math.random() * WIDTH);
         const caveY = Math.floor(Math.random() * 20) + 35; // Deep underground
         const caveSize = Math.floor(Math.random() * 8) + 5;
