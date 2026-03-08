@@ -532,17 +532,19 @@
       // Head
       ctx.fillStyle = '#8d6238';
       ctx.fillRect(headX, headY, headW, 2 * pixel);
-      ctx.fillStyle = '#c68642';
+      ctx.fillStyle = '#e8be97';
       ctx.fillRect(headX, headY + 2 * pixel, headW, 6 * pixel);
       ctx.fillStyle = '#4a2c1a';
-      ctx.fillRect(headX + (dir > 0 ? 5 : 1) * pixel, headY + 4 * pixel, 2 * pixel, pixel);
+      ctx.fillRect(headX + 2 * pixel, headY + 4 * pixel, 2 * pixel, pixel);
+      ctx.fillRect(headX + 4 * pixel, headY + 4 * pixel, 2 * pixel, pixel);
       ctx.fillStyle = '#1f120a';
-      ctx.fillRect(headX + (dir > 0 ? 6 : 2) * pixel, headY + 4 * pixel, pixel, pixel);
+      ctx.fillRect(headX + 3 * pixel, headY + 4 * pixel, pixel, pixel);
+      ctx.fillRect(headX + 5 * pixel, headY + 4 * pixel, pixel, pixel);
 
       // Torso and arms
       ctx.fillStyle = '#4aa3df';
       ctx.fillRect(bodyX, bodyY, bodyW, bodyH);
-      ctx.fillStyle = '#c68642';
+      ctx.fillStyle = '#e8be97';
       ctx.fillRect(bodyX - limbW, bodyY + armSwing, limbW, limbH);
       ctx.fillRect(bodyX + bodyW, bodyY - armSwing, limbW, limbH);
 
