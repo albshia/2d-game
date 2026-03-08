@@ -911,7 +911,10 @@
 
       // Weather effects
       if (weather === 'rain') {
-        ctx.fillStyle = 'rgba(100, 149, 237, 0.6)';
+        const rainColor = brightness >= 1
+          ? 'rgba(55, 95, 165, 0.72)'   // Darker rain in daytime
+          : 'rgba(100, 149, 237, 0.6)'; // Existing rain at night
+        ctx.fillStyle = rainColor;
         for (let i = 0; i < 100; i++) {
           const x = Math.random() * canvas.width;
           const y = Math.random() * canvas.height;
