@@ -265,6 +265,23 @@
       }
     }
 
+    // Post-processing: remove stone blocks that are above the surface
+    const heightMap = [];
+    for (let x = 0; x < WIDTH; x++) {
+      let h = 30;
+      h += Math.sin(x * 0.01) * 2;
+      h += Math.sin(x * 0.05) * 1;
+      heightMap[x] = Math.floor(h);
+    }
+    
+    for (let x = 0; x < WIDTH; x++) {
+      for (let y = 0; y < HEIGHT; y++) {
+        if (world[x][y] === 'stone' && y >= heightMap[x]) {
+          world[x][y] = null; // Remove stone above surface
+        }
+      }
+    }
+
     // Calculate spawn position on surface
     const spawnX = 20;
     const spawnSurfaceHeight = 25 + Math.sin(spawnX * 0.05) * 8 + Math.sin(spawnX * 0.15) * 4 + Math.sin(spawnX * 0.3) * 2;
