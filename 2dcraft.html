@@ -240,7 +240,7 @@
     generateTerrain();
 
     // Calculate spawn position on surface
-    const spawnX = 20;
+    const spawnX = Math.floor(WIDTH / 2);
     const spawnSurfaceHeight = 25 + Math.sin(spawnX * 0.05) * 8 + Math.sin(spawnX * 0.15) * 4 + Math.sin(spawnX * 0.3) * 2;
     const player = {
       x: spawnX + 0.5,
@@ -310,8 +310,9 @@
       // Regenerate terrain
       generateTerrain();
       // Respawn player on surface
-      const spawnSurfaceHeight = 25 + Math.sin(20 * 0.05) * 8 + Math.sin(20 * 0.15) * 4 + Math.sin(20 * 0.3) * 2;
-      player.x = 20.5;
+      const respawnX = Math.floor(WIDTH / 2);
+      const spawnSurfaceHeight = 25 + Math.sin(respawnX * 0.05) * 8 + Math.sin(respawnX * 0.15) * 4 + Math.sin(respawnX * 0.3) * 2;
+      player.x = respawnX + 0.5;
       player.y = spawnSurfaceHeight - 2;
       player.vx = 0;
       player.vy = 0;
