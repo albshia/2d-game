@@ -253,7 +253,8 @@
       facing: 1,
       walkCycle: 0,
       grounded: false,
-      handActionTimer: 0
+      handActionTimer: 0,
+      handActionSide: 1
     };
     const HAND_ACTION_DURATION = 0.16;
     const keys = { left:false, right:false, jump:false, down:false };
@@ -400,6 +401,7 @@
       }
 
       if (acted) {
+        player.handActionSide = (gx + 0.5) >= player.x ? 1 : -1;
         player.handActionTimer = HAND_ACTION_DURATION;
       }
     }
@@ -563,8 +565,8 @@
       ctx.fillStyle = '#4aa3df';
       ctx.fillRect(bodyX, bodyY, bodyW, bodyH);
       const sleeveHeight = 4 * pixel;
-      const leftArmY = bodyY + armSwing + (dir < 0 ? -actionLift : 0);
-      const rightArmY = bodyY - armSwing + (dir > 0 ? -actionLift : 0);
+      const leftArmY = bodyY + armSwing + (player.handActionSide < 0 ? -actionLift : 0);
+      const rightArmY = bodyY - armSwing + (player.handActionSide > 0 ? -actionLift : 0);
       ctx.fillStyle = '#4aa3df';
       ctx.fillRect(bodyX - limbW, leftArmY, limbW, sleeveHeight);
       ctx.fillRect(bodyX + bodyW, rightArmY, limbW, sleeveHeight);
