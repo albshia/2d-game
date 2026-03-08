@@ -1174,18 +1174,58 @@
 
     function drawCreeperMob(mob, screenX, screenY, wPx, hPx, moving) {
       const walk = moving ? Math.sin(mob.walkCycle) * (hPx * 0.03) : 0;
-      ctx.fillStyle = '#4caf50';
-      ctx.fillRect(screenX + wPx * 0.12, screenY, wPx * 0.76, hPx * 0.72);
-      ctx.fillStyle = '#2f8f3a';
-      ctx.fillRect(screenX + wPx * 0.2, screenY + hPx * 0.08, wPx * 0.6, hPx * 0.16);
+      const pixel = Math.max(1, Math.floor(Math.min(wPx, hPx) / 12));
+      const bodyX = screenX + wPx * 0.14;
+      const bodyY = screenY;
+      const bodyW = wPx * 0.72;
+      const bodyH = hPx * 0.78;
+
+      // Base body
+      ctx.fillStyle = '#67b64b';
+      ctx.fillRect(bodyX, bodyY, bodyW, bodyH);
+
+      // Minecraft-like green dither pattern
+      ctx.fillStyle = '#4b9a3b';
+      for (let y = 0; y < bodyH; y += pixel * 2) {
+        for (let x = 0; x < bodyW; x += pixel * 2) {
+          if (((x / pixel) + (y / pixel)) % 3 === 0) {
+            ctx.fillRect(bodyX + x, bodyY + y, pixel, pixel);
+          }
+        }
+      }
+      ctx.fillStyle = '#82c65f';
+      for (let y = pixel; y < bodyH; y += pixel * 3) {
+        for (let x = pixel; x < bodyW; x += pixel * 3) {
+          if (((x / pixel) + (y / pixel)) % 2 === 0) {
+            ctx.fillRect(bodyX + x, bodyY + y, pixel, pixel);
+          }
+        }
+      }
+
+      // Classic creeper face
+      const faceY = bodyY + bodyH * 0.2;
       ctx.fillStyle = '#111';
-      ctx.fillRect(screenX + wPx * 0.28, screenY + hPx * 0.2, wPx * 0.14, hPx * 0.12);
-      ctx.fillRect(screenX + wPx * 0.58, screenY + hPx * 0.2, wPx * 0.14, hPx * 0.12);
-      ctx.fillRect(screenX + wPx * 0.43, screenY + hPx * 0.36, wPx * 0.14, hPx * 0.2);
-      ctx.fillRect(screenX + wPx * 0.34, screenY + hPx * 0.5, wPx * 0.32, hPx * 0.1);
-      ctx.fillStyle = '#316f35';
-      ctx.fillRect(screenX + wPx * 0.18, screenY + hPx * 0.72 + walk, wPx * 0.22, hPx * 0.28);
-      ctx.fillRect(screenX + wPx * 0.6, screenY + hPx * 0.72 - walk, wPx * 0.22, hPx * 0.28);
+      ctx.fillRect(bodyX + bodyW * 0.23, faceY, bodyW * 0.14, bodyH * 0.11);
+      ctx.fillRect(bodyX + bodyW * 0.63, faceY, bodyW * 0.14, bodyH * 0.11);
+      ctx.fillRect(bodyX + bodyW * 0.42, faceY + bodyH * 0.12, bodyW * 0.16, bodyH * 0.2);
+      ctx.fillRect(bodyX + bodyW * 0.32, faceY + bodyH * 0.26, bodyW * 0.36, bodyH * 0.1);
+      ctx.fillRect(bodyX + bodyW * 0.34, faceY + bodyH * 0.32, bodyW * 0.12, bodyH * 0.12);
+      ctx.fillRect(bodyX + bodyW * 0.54, faceY + bodyH * 0.32, bodyW * 0.12, bodyH * 0.12);
+
+      // Four legs
+      const legW = bodyW * 0.19;
+      const legH = hPx * 0.22;
+      const legY = bodyY + bodyH - pixel * 0.3;
+      ctx.fillStyle = '#4c943a';
+      ctx.fillRect(bodyX + bodyW * 0.02, legY + walk, legW, legH);
+      ctx.fillRect(bodyX + bodyW * 0.29, legY - walk, legW, legH);
+      ctx.fillRect(bodyX + bodyW * 0.56, legY + walk, legW, legH);
+      ctx.fillRect(bodyX + bodyW * 0.79, legY - walk, legW, legH);
+
+      // Outline
+      ctx.strokeStyle = 'rgba(0,0,0,0.38)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bodyX, bodyY, bodyW, bodyH);
     }
 
     function drawMob(mob, cam) {
