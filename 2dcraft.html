@@ -188,11 +188,6 @@
         }
       }
 
-      // Add bedrock at the bottom
-      for (let x = 0; x < WIDTH; x++) {
-        world[x][HEIGHT - 1] = 'stone';
-      }
-
       // Generate deep underground caves based on depth from each column's surface.
       // This keeps caves away from the topsoil and prevents surface stone exposure.
       for (let i = 0; i < 40; i++) {
@@ -327,7 +322,7 @@
         const heightTiles = rows * cell;
         clouds.push({
           cx: Math.random() * (WIDTH + 16) - 8,
-          cy: HEIGHT * 0.48 + Math.random() * (HEIGHT * 0.48),
+          cy: HEIGHT * 0.44 + Math.random() * (HEIGHT * 0.38),
           speed: 0.28 + Math.random() * 0.44, // tiles per second
           cols,
           rows,
@@ -1065,7 +1060,7 @@
         c.cx += c.speed * dt * (weather === 'rain' ? 1.2 : 1.0);
         if (c.cx - c.widthTiles / 2 > WIDTH + 8) {
           c.cx = -8 - c.widthTiles / 2;
-          c.cy = HEIGHT * 0.48 + Math.random() * (HEIGHT * 0.48);
+          c.cy = HEIGHT * 0.44 + Math.random() * (HEIGHT * 0.38);
         }
       }
       let ax = 0;
