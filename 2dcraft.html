@@ -385,6 +385,7 @@
       creeper: { w: 0.78, h: 1.8, speed: 1.9, maxHealth: 20, damage: 4, hitCooldown: 1.1, color: '#4caf50' }
     };
     let mobs = [];
+    let hostileArrows = [];
     let hostileSpawnTimer = 0;
     const healthBarFill = document.getElementById('healthBarFill');
     const healthText = document.getElementById('healthText');
@@ -419,6 +420,20 @@
     function isNightTime() {
       const t = gameTime / 24000;
       return !(t > 0.25 && t < 0.75);
+    }
+
+    function fireSkeletonArrow(skeleton) {
+      const dir = skeleton.facing >= 0 ? 1 : -1;
+      const spawnX = skeleton.x + dir * (skeleton.w * 0.48);
+      const spawnY = skeleton.y + skeleton.h * 0.08;
+      hostileArrows.push({
+        x: spawnX,
+        y: spawnY,
+        vx: dir * 11.5,
+        vy: 0.6,
+        life: 2.8,
+        damage: 3
+      });
     }
 
     // Time and weather system
@@ -521,7 +536,7 @@
     document.getElementById('spawnCow').onclick = () => { spawnMob('cow'); };
     document.getElementById('spawnSheep').onclick = () => { spawnMob('sheep'); };
     document.getElementById('spawnPig').onclick = () => { spawnMob('pig'); };
-    document.getElementById('despawnAll').onclick = () => { mobs = []; };
+    document.getElementById('despawnAll').onclick = () => { mobs = []; hostileArrows = []; };
 
     // World controls
     document.getElementById('regenerateMap').onclick = () => {
@@ -539,6 +554,7 @@
       respawnPlayer();
       // Clear mobs
       mobs = [];
+      hostileArrows = [];
     };
 
     // Spawn mob function
@@ -1159,6 +1175,7 @@
       const headH = hPx * 0.24;
       const bodyY = screenY + headH;
       const legY = bodyY + hPx * 0.4;
+      const dir = mob.facing >= 0 ? 1 : -1;
 
       ctx.fillStyle = '#dcdcdc';
       ctx.fillRect(screenX + wPx * 0.18, screenY, wPx * 0.64, headH);
@@ -1170,6 +1187,21 @@
       ctx.fillStyle = '#111';
       ctx.fillRect(screenX + wPx * 0.34, screenY + headH * 0.36, wPx * 0.1, headH * 0.1);
       ctx.fillRect(screenX + wPx * 0.56, screenY + headH * 0.36, wPx * 0.1, headH * 0.1);
+
+      // Bow (held in front arm)
+      const bowX = dir > 0 ? screenX + wPx * 0.76 : screenX + wPx * 0.06;
+      const bowY = bodyY + hPx * 0.14;
+      ctx.strokeStyle = '#8b5a2b';
+      ctx.lineWidth = Math.max(1, wPx * 0.05);
+      ctx.beginPath();
+      ctx.arc(bowX, bowY + hPx * 0.07, wPx * 0.1, dir > 0 ? -Math.PI / 2 : Math.PI / 2, dir > 0 ? Math.PI / 2 : -Math.PI / 2, dir < 0);
+      ctx.stroke();
+      ctx.strokeStyle = '#d9d9d9';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(bowX, bowY - hPx * 0.03);
+      ctx.lineTo(bowX, bowY + hPx * 0.17);
+      ctx.stroke();
     }
 
     function drawCreeperMob(mob, screenX, screenY, wPx, hPx, moving) {
@@ -1395,6 +1427,19 @@
         drawMob(mob, cam);
       });
 
+      // Render hostile arrows
+      ctx.strokeStyle = '#3b2a1a';
+      ctx.lineWidth = Math.max(1, tileSize * 0.07);
+      hostileArrows.forEach(a => {
+        const sx = a.x * tileSize - cam.x;
+        const sy = canvas.height - (a.y * tileSize - cam.y);
+        const ex = sx + (a.vx >= 0 ? 7 : -7);
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(ex, sy - a.vy * 0.4);
+        ctx.stroke();
+      });
+
       // player
       const worldPx = player.x * tileSize;
       const worldPy = player.y * tileSize;
@@ -1509,6 +1554,31 @@
       player.x = Math.max(0.2, Math.min(WIDTH-0.2, player.x));
       player.y = Math.max(0.2, Math.min(HEIGHT-0.2, player.y));
 
+      // Update hostile arrows
+      for (let i = hostileArrows.length - 1; i >= 0; i--) {
+        const a = hostileArrows[i];
+        a.life -= dt;
+        a.vy += -9 * dt;
+        a.x += a.vx * dt;
+        a.y += a.vy * dt;
+
+        const gx = Math.floor(a.x);
+        const gy = Math.floor(a.y);
+        if (a.life <= 0 || gx < 0 || gx >= WIDTH || gy < 0 || gy >= HEIGHT || isSolid(gx, gy)) {
+          hostileArrows.splice(i, 1);
+          continue;
+        }
+
+        const left = player.x - player.w / 2;
+        const right = player.x + player.w / 2;
+        const bottom = player.y - PLAYER_COLLIDER_H / 2;
+        const top = player.y + PLAYER_COLLIDER_H / 2;
+        if (a.x >= left && a.x <= right && a.y >= bottom && a.y <= top) {
+          damagePlayer(a.damage);
+          hostileArrows.splice(i, 1);
+        }
+      }
+
       autoSpawnHostiles(dt);
 
       // Update mobs
@@ -1519,6 +1589,18 @@
           const dist = Math.hypot(dx, dy);
           if (dist < 22 && Math.abs(dy) < 6) {
             mob.direction = dx >= 0 ? 1 : -1;
+            if (mob.type === 'skeleton') {
+              if (mob.rangedCooldown == null) mob.rangedCooldown = 0;
+              mob.rangedCooldown = Math.max(0, mob.rangedCooldown - dt);
+              // Keep skeletons at range and shoot arrows.
+              if (dist > 8.5) mob.direction = dx >= 0 ? 1 : -1;
+              else if (dist < 5) mob.direction = dx >= 0 ? -1 : 1;
+              else mob.direction = 0;
+              if (dist >= 4 && dist <= 16 && Math.abs(dy) < 3.8 && mob.rangedCooldown <= 0) {
+                fireSkeletonArrow(mob);
+                mob.rangedCooldown = 1.35 + Math.random() * 0.9;
+              }
+            }
           } else {
             mob.moveTimer -= dt;
             if (mob.moveTimer <= 0) {
