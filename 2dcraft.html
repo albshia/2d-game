@@ -179,12 +179,10 @@
             const depthFromSurface = surfaceHeight - y;
             if (depthFromSurface <= 1) {
               world[x][y] = 'grass'; // Grass covering the surface
-            } else if (depthFromSurface <= 4) {
+            } else if (depthFromSurface <= 6) {
               world[x][y] = 'dirt'; // Dirt layer below grass
-            } else if (depthFromSurface > 12) {
-              world[x][y] = 'stone'; // Stone from 13+ blocks deep
             } else {
-              world[x][y] = 'dirt'; // Fill remaining depths with dirt
+              world[x][y] = 'stone'; // Stone below topsoil
             }
           }
         }
@@ -195,35 +193,13 @@
         world[x][HEIGHT - 1] = 'stone';
       }
 
-      // Generate exposed caves (near surface, 8-25 depth)
-      for (let i = 0; i < 30; i++) {
-        const caveX = Math.floor(Math.random() * WIDTH);
-        const caveY = Math.floor(Math.random() * 15) + 8; // Near surface
-        const caveSize = Math.floor(Math.random() * 8) + 5;
-
-        for (let dx = -caveSize; dx <= caveSize; dx++) {
-          for (let dy = -caveSize; dy <= caveSize; dy++) {
-            const nx = caveX + dx, ny = caveY + dy;
-            const distance = Math.sqrt(dx*dx + dy*dy);
-            if (nx >= 0 && nx < WIDTH && ny >= 0 && ny < HEIGHT && distance <= caveSize && world[nx][ny] !== 'bedrock') {
-              // Only carve if below surface
-              if (ny < heightMap[nx]) {
-                // Carve hollow center, leave stone walls
-                if (distance <= caveSize * 0.5) {
-                  world[nx][ny] = null; // Hollow interior
-                } else if (Math.random() > 0.1) {
-                  world[nx][ny] = 'stone'; // Stone formations
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // Generate deep underground caves (below depth 30)
+      // Generate deep underground caves based on depth from each column's surface.
+      // This keeps caves away from the topsoil and prevents surface stone exposure.
       for (let i = 0; i < 40; i++) {
         const caveX = Math.floor(Math.random() * WIDTH);
-        const caveY = Math.floor(Math.random() * 15) + 25; // Deep underground but not near bedrock
+        const surfaceAtCaveX = heightMap[caveX];
+        const caveDepth = Math.floor(Math.random() * 28) + 14; // 14-41 blocks below surface
+        const caveY = Math.max(2, surfaceAtCaveX - caveDepth);
         const caveSize = Math.floor(Math.random() * 10) + 6;
 
         for (let dx = -caveSize; dx <= caveSize; dx++) {
@@ -231,15 +207,30 @@
             const nx = caveX + dx, ny = caveY + dy;
             const distance = Math.sqrt(dx*dx + dy*dy);
             if (nx >= 0 && nx < WIDTH && ny >= 0 && ny < HEIGHT && distance <= caveSize && world[nx][ny] !== 'bedrock') {
-              // Only carve if below surface
-              if (ny < heightMap[nx]) {
-                // Carve hollow center, leave stone walls
-                if (distance <= caveSize * 0.5) {
-                  world[nx][ny] = null; // Hollow interior
-                } else if (Math.random() > 0.1) {
-                  world[nx][ny] = 'stone'; // Stone formations
+              // Keep carving at least 8 blocks below surface to avoid exposed stone.
+              const depthFromSurface = heightMap[nx] - ny;
+              if (depthFromSurface >= 8 && ny < heightMap[nx]) {
+                if (distance <= caveSize * 0.55) {
+                  world[nx][ny] = null; // Hollow cave interior
+                } else if (Math.random() > 0.2 && depthFromSurface >= 10) {
+                  world[nx][ny] = 'stone'; // Occasional rough stone walls deep underground
                 }
               }
+            }
+          }
+        }
+      }
+      // Post-processing: cover exposed dirt with grass and avoid exposed stone near surface.
+      for (let x = 0; x < WIDTH; x++) {
+        for (let y = 0; y < HEIGHT; y++) {
+          if (world[x][y] === 'dirt' && (y + 1 >= HEIGHT || world[x][y + 1] === null)) {
+            world[x][y] = 'grass';
+          }
+
+          if (world[x][y] === 'stone') {
+            const depthFromSurface = heightMap[x] - y;
+            if (depthFromSurface <= 6 && (y + 1 >= HEIGHT || world[x][y + 1] === null)) {
+              world[x][y] = 'dirt';
             }
           }
         }
@@ -248,39 +239,21 @@
 
     generateTerrain();
 
-    // Post-processing: cover all exposed dirt with grass
-    for (let x = 0; x < WIDTH; x++) {
-      for (let y = 0; y < HEIGHT; y++) {
-        if (world[x][y] === 'dirt') {
-          // Check if this dirt block is exposed (has air/null above it)
-          if (y + 1 >= HEIGHT || world[x][y + 1] === null) {
-            world[x][y] = 'grass';
-          }
-        }
-      }
-    }
-
-    // Post-processing: remove stone only if it's above the surface level
-    const heightMap = [];
-    for (let x = 0; x < WIDTH; x++) {
-      let h = 30;
-      h += Math.sin(x * 0.01) * 2;
-      h += Math.sin(x * 0.05) * 1;
-      heightMap[x] = Math.floor(h);
-    }
-    
-    for (let x = 0; x < WIDTH; x++) {
-      for (let y = 0; y < HEIGHT; y++) {
-        if (world[x][y] === 'stone' && y >= heightMap[x]) {
-          world[x][y] = null; // Remove stone above surface only
-        }
-      }
-    }
-
     // Calculate spawn position on surface
     const spawnX = 20;
     const spawnSurfaceHeight = 25 + Math.sin(spawnX * 0.05) * 8 + Math.sin(spawnX * 0.15) * 4 + Math.sin(spawnX * 0.3) * 2;
-    const player = { x: spawnX + 0.5, y: spawnSurfaceHeight - 2, vx:0, vy:0, speed: 6, w:0.6, h:2.0, skin: '#ffeb3b' };
+    const player = {
+      x: spawnX + 0.5,
+      y: spawnSurfaceHeight - 2,
+      vx: 0,
+      vy: 0,
+      speed: 6,
+      w: 0.6,
+      h: 2.0,
+      facing: 1,
+      walkCycle: 0,
+      grounded: false
+    };
     const keys = { left:false, right:false, jump:false, down:false };
 
     // Mob system
@@ -296,24 +269,20 @@
     let weather = 'clear'; // 'clear', 'rain'
     let timeSpeed = 1; // How fast time passes
 
-    // Skin options
-    const SKINS = ['#ffeb3b', '#4caf50', '#2196f3', '#ff9800', '#e91e63', '#9c27b0', '#607d8b'];
     window.addEventListener('keydown', e=>{ if (e.code==='KeyA' || e.code==='ArrowLeft') keys.left=true; if (e.code==='KeyD' || e.code==='ArrowRight') keys.right=true; if (e.code==='Space' || e.code==='KeyW' || e.code==='ArrowUp') keys.jump=true; if (e.code==='KeyS' || e.code==='ArrowDown') keys.down=true; const n = parseInt(e.key,10); if (!Number.isNaN(n) && n>=1 && n<=BLOCKS.length){ selected = n-1; renderHotbar(); } });
     window.addEventListener('keyup', e=>{ if (e.code==='KeyA' || e.code==='ArrowLeft') keys.left=false; if (e.code==='KeyD' || e.code==='ArrowRight') keys.right=false; if (e.code==='Space' || e.code==='KeyW' || e.code==='ArrowUp') keys.jump=false; if (e.code==='KeyS' || e.code==='ArrowDown') keys.down=false; });
 
-    // Initialize skin selector
+    // Show fixed Steve skin indicator
     const skinSelector = document.getElementById('skinSelector');
-    SKINS.forEach((color, i) => {
-      const skinBtn = document.createElement('button');
-      skinBtn.style.background = color;
-      skinBtn.style.border = '2px solid rgba(255,255,255,0.3)';
-      skinBtn.style.width = '24px';
-      skinBtn.style.height = '24px';
-      skinBtn.style.borderRadius = '50%';
-      skinBtn.style.cursor = 'pointer';
-      skinBtn.onclick = () => { player.skin = color; };
-      skinSelector.appendChild(skinBtn);
-    });
+    const steveLabel = document.createElement('div');
+    steveLabel.textContent = 'Steve';
+    steveLabel.style.color = 'rgba(255,255,255,.9)';
+    steveLabel.style.fontSize = '11px';
+    steveLabel.style.padding = '3px 6px';
+    steveLabel.style.border = '1px solid rgba(255,255,255,.25)';
+    steveLabel.style.borderRadius = '6px';
+    steveLabel.style.background = 'rgba(255,255,255,.08)';
+    skinSelector.appendChild(steveLabel);
 
     // Time and weather controls
     document.getElementById('timeDay').onclick = () => { gameTime = 6000; }; // Day time
@@ -543,6 +512,57 @@
       return grounded;
     }
 
+    function drawSteve(screenX, screenY, pixel, facing, walkCycle, moving) {
+      const dir = facing >= 0 ? 1 : -1;
+      const legSwing = moving ? Math.sin(walkCycle) * pixel * 0.9 : 0;
+      const armSwing = moving ? -Math.sin(walkCycle) * pixel * 0.8 : 0;
+
+      const headW = 8 * pixel, headH = 8 * pixel;
+      const bodyW = 8 * pixel, bodyH = 12 * pixel;
+      const limbW = 4 * pixel, limbH = 12 * pixel;
+
+      const spriteW = 16 * pixel;
+      const centerX = screenX + (player.w * tileSize) / 2;
+      const leftX = centerX - spriteW / 2;
+      const headX = leftX + 4 * pixel;
+      const headY = screenY;
+      const bodyX = leftX + 4 * pixel;
+      const bodyY = headY + headH;
+
+      // Head
+      ctx.fillStyle = '#8d6238';
+      ctx.fillRect(headX, headY, headW, 2 * pixel);
+      ctx.fillStyle = '#c68642';
+      ctx.fillRect(headX, headY + 2 * pixel, headW, 6 * pixel);
+      ctx.fillStyle = '#4a2c1a';
+      ctx.fillRect(headX + (dir > 0 ? 5 : 1) * pixel, headY + 4 * pixel, 2 * pixel, pixel);
+      ctx.fillStyle = '#1f120a';
+      ctx.fillRect(headX + (dir > 0 ? 6 : 2) * pixel, headY + 4 * pixel, pixel, pixel);
+
+      // Torso and arms
+      ctx.fillStyle = '#4aa3df';
+      ctx.fillRect(bodyX, bodyY, bodyW, bodyH);
+      ctx.fillStyle = '#c68642';
+      ctx.fillRect(bodyX - limbW, bodyY + armSwing, limbW, limbH);
+      ctx.fillRect(bodyX + bodyW, bodyY - armSwing, limbW, limbH);
+
+      // Pants/legs
+      ctx.fillStyle = '#355ec9';
+      ctx.fillRect(bodyX, bodyY + bodyH - 2 * pixel, bodyW, 2 * pixel);
+      ctx.fillRect(bodyX, bodyY + bodyH + legSwing, limbW, limbH);
+      ctx.fillRect(bodyX + bodyW - limbW, bodyY + bodyH - legSwing, limbW, limbH);
+
+      // Outline
+      ctx.strokeStyle = '#101010';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(headX, headY, headW, headH);
+      ctx.strokeRect(bodyX, bodyY, bodyW, bodyH);
+      ctx.strokeRect(bodyX - limbW, bodyY + armSwing, limbW, limbH);
+      ctx.strokeRect(bodyX + bodyW, bodyY - armSwing, limbW, limbH);
+      ctx.strokeRect(bodyX, bodyY + bodyH + legSwing, limbW, limbH);
+      ctx.strokeRect(bodyX + bodyW - limbW, bodyY + bodyH - legSwing, limbW, limbH);
+    }
+
     function draw(){
       // Update time
       gameTime = (gameTime + timeSpeed) % 24000;
@@ -626,20 +646,9 @@
       const screenX = worldPx - cam.x - (player.w*tileSize)/2;
       const screenY = canvas.height - (worldPy - cam.y) - (player.h*tileSize)/2;
 
-      // Draw body (bottom part)
-      const bodyHeight = player.h * tileSize * 0.7; // Body takes up 70% of height
-      const headHeight = player.h * tileSize * 0.3; // Head takes up 30% of height
-      ctx.fillStyle = player.skin;
-      ctx.fillRect(screenX, screenY + headHeight, player.w*tileSize, bodyHeight);
-
-      // Draw head (top part, beige)
-      ctx.fillStyle = '#D2B48C'; // Darker beige/tan color
-      ctx.fillRect(screenX, screenY, player.w*tileSize, headHeight);
-
-      // Draw outline
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(screenX, screenY, player.w*tileSize, player.h*tileSize);
+      const moving = Math.abs(player.vx) > 0.15 && player.grounded;
+      const stevePixel = (player.h * tileSize) / 32;
+      drawSteve(screenX, screenY, stevePixel, player.facing, player.walkCycle, moving);
 
       // highlight mouse tile
       const cam2 = getCameraOffset();
@@ -696,6 +705,7 @@
       const targetVx = ax * player.speed;
       // simple accel
       player.vx += (targetVx - player.vx) * Math.min(10*dt, 1);
+      if (Math.abs(player.vx) > 0.1) player.facing = player.vx > 0 ? 1 : -1;
       // gravity
       const onLadder = isOnLadder();
       if (!onLadder) {
@@ -713,7 +723,11 @@
       player.y += player.vy * dt;
 
       const grounded = resolveCollisions();
+      player.grounded = grounded;
       if (grounded && keys.jump && !onLadder){ player.vy = 9.0; }
+      if (Math.abs(player.vx) > 0.15 && grounded) {
+        player.walkCycle += dt * 14;
+      }
 
       // clamp within world
       player.x = Math.max(0.2, Math.min(WIDTH-0.2, player.x));
