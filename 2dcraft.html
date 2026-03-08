@@ -423,6 +423,30 @@
       return !(t > 0.25 && t < 0.75);
     }
 
+    function explodeBlocksAt(cx, cy, radius) {
+      const minX = Math.max(0, Math.floor(cx - radius));
+      const maxX = Math.min(WIDTH - 1, Math.ceil(cx + radius));
+      const minY = Math.max(0, Math.floor(cy - radius));
+      const maxY = Math.min(HEIGHT - 1, Math.ceil(cy + radius));
+      for (let gx = minX; gx <= maxX; gx++) {
+        for (let gy = minY; gy <= maxY; gy++) {
+          const dx = (gx + 0.5) - cx;
+          const dy = (gy + 0.5) - cy;
+          if (dx * dx + dy * dy > radius * radius) continue;
+          const block = world[gx][gy];
+          if (!block) continue;
+          if (block === 'door') {
+            const lowerY = (gy > 0 && world[gx][gy - 1] === 'door') ? gy - 1 : gy;
+            delete doorStates[`${gx},${lowerY}`];
+            world[gx][lowerY] = null;
+            if (lowerY + 1 < HEIGHT && world[gx][lowerY + 1] === 'door') world[gx][lowerY + 1] = null;
+          } else {
+            world[gx][gy] = null;
+          }
+        }
+      }
+    }
+
     function fireSkeletonArrow(skeleton) {
       const dir = skeleton.facing >= 0 ? 1 : -1;
       const spawnX = skeleton.x + dir * (skeleton.w * 0.48);
@@ -1651,6 +1675,7 @@
               mob.fuseTimer -= dt;
               if (mob.fuseTimer <= 0) {
                 // Creeper dies on explosion; player dies if within blast radius.
+                explodeBlocksAt(mob.x, mob.y, 2.6);
                 if (Math.hypot(player.x - mob.x, player.y - mob.y) < 2.8) {
                   player.health = 0;
                   updateHealthUI();
