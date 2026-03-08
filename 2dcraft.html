@@ -406,13 +406,13 @@
 
           const selectedBlock = BLOCKS[selected].id;
           if (selectedBlock === 'door') {
-            // Place 2-block tall door
-            if (gy > 0 && gy < HEIGHT-1 && !world[gx][gy] && !world[gx][gy-1]) {
+            // Place 2-block tall door from lower block (clicked) upward
+            if (gy >= 0 && gy < HEIGHT-1 && !world[gx][gy] && !world[gx][gy+1]) {
               world[gx][gy] = 'door';
-              world[gx][gy-1] = 'door';
+              world[gx][gy+1] = 'door';
               acted = true;
               // Initialize door state on lower door block
-              const key = `${gx},${gy-1}`;
+              const key = `${gx},${gy}`;
               doorStates[key] = false;
             }
           } else {
