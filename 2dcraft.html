@@ -291,6 +291,52 @@
     let gameTime = 6000; // 0-24000 (Minecraft-like time), start at day time
     let weather = 'clear'; // 'clear', 'rain'
     let timeSpeed = 1; // How fast time passes
+    let clouds = [];
+
+    function seededNoise(seed) {
+      const v = Math.sin(seed * 12.9898) * 43758.5453123;
+      return v - Math.floor(v);
+    }
+
+    function buildCloudMask(cols, rows, seed) {
+      const mask = [];
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const nx = ((x + 0.5) / cols) * 2 - 1;
+          const ny = ((y + 0.5) / rows) * 2 - 1;
+          const ellipse = (nx * nx * 0.9) + (ny * ny * 1.35);
+          const jitter = seededNoise(seed + x * 17 + y * 31) * 0.32;
+          const carve = y === rows - 1 && seededNoise(seed + x * 43) > 0.72;
+          if (ellipse < 1.03 + jitter && !carve) {
+            mask.push({ x, y });
+          }
+        }
+      }
+      return mask;
+    }
+
+    function initClouds() {
+      clouds = [];
+      const count = 34;
+      for (let i = 0; i < count; i++) {
+        const cols = 6 + Math.floor(Math.random() * 7);   // 6-12
+        const rows = 3 + Math.floor(Math.random() * 3);   // 3-5
+        const pixel = 5 + Math.floor(Math.random() * 5);  // 5-9 px cloud blocks
+        const seed = Math.random() * 10000;
+        const width = cols * pixel;
+        clouds.push({
+          x: Math.random() * (innerWidth + 500) - 250,
+          y: 22 + Math.random() * (innerHeight * 0.32),
+          speed: 7 + Math.random() * 13,
+          cols,
+          rows,
+          pixel,
+          width,
+          mask: buildCloudMask(cols, rows, seed)
+        });
+      }
+    }
+    initClouds();
 
     window.addEventListener('keydown', e=>{ if (e.code==='KeyA' || e.code==='ArrowLeft') keys.left=true; if (e.code==='KeyD' || e.code==='ArrowRight') keys.right=true; if (e.code==='Space' || e.code==='KeyW' || e.code==='ArrowUp') keys.jump=true; if (e.code==='KeyS' || e.code==='ArrowDown') keys.down=true; const n = parseInt(e.key,10); if (!Number.isNaN(n) && n>=1 && n<=BLOCKS.length){ selected = n-1; renderHotbar(); } });
     window.addEventListener('keyup', e=>{ if (e.code==='KeyA' || e.code==='ArrowLeft') keys.left=false; if (e.code==='KeyD' || e.code==='ArrowRight') keys.right=false; if (e.code==='Space' || e.code==='KeyW' || e.code==='ArrowUp') keys.jump=false; if (e.code==='KeyS' || e.code==='ArrowDown') keys.down=false; });
@@ -909,6 +955,19 @@
         }
       }
 
+      // Pixel clouds: fewer in clear weather, more in rain.
+      const cloudCount = weather === 'rain' ? Math.floor(clouds.length * 0.9) : Math.floor(clouds.length * 0.45);
+      const cloudColor = weather === 'rain'
+        ? (brightness < 0.5 ? 'rgba(120,130,145,0.52)' : 'rgba(155,165,180,0.66)')
+        : (brightness < 0.5 ? 'rgba(190,200,220,0.28)' : 'rgba(250,255,255,0.72)');
+      ctx.fillStyle = cloudColor;
+      for (let i = 0; i < cloudCount; i++) {
+        const c = clouds[i];
+        for (const cell of c.mask) {
+          ctx.fillRect(c.x + cell.x * c.pixel, c.y + cell.y * c.pixel, c.pixel, c.pixel);
+        }
+      }
+
       // Weather effects
       if (weather === 'rain') {
         const rainColor = brightness >= 1
@@ -993,6 +1052,14 @@
       // input
       if (player.handActionTimer > 0) {
         player.handActionTimer = Math.max(0, player.handActionTimer - dt);
+      }
+      // Cloud drift
+      for (const c of clouds) {
+        c.x += c.speed * dt * (weather === 'rain' ? 1.2 : 1.0);
+        if (c.x > canvas.width + 120) {
+          c.x = -c.width - 80 - Math.random() * 160;
+          c.y = 22 + Math.random() * (canvas.height * 0.32);
+        }
       }
       let ax = 0;
       if (keys.left) ax -= 1; if (keys.right) ax += 1;
