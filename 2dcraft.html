@@ -239,12 +239,31 @@
 
     generateTerrain();
 
-    // Calculate spawn position on surface
-    const spawnX = Math.floor(WIDTH / 2);
-    const spawnSurfaceHeight = 25 + Math.sin(spawnX * 0.05) * 8 + Math.sin(spawnX * 0.15) * 4 + Math.sin(spawnX * 0.3) * 2;
+    function getGrassSpawn(preferredX) {
+      const maxRadius = Math.max(preferredX, WIDTH - 1 - preferredX);
+      for (let radius = 0; radius <= maxRadius; radius++) {
+        const candidates = radius === 0
+          ? [preferredX]
+          : [preferredX - radius, preferredX + radius];
+        for (const x of candidates) {
+          if (x < 0 || x >= WIDTH) continue;
+          for (let y = HEIGHT - 2; y >= 0; y--) {
+            // Spawn only on grass with headroom for the 2-block-tall player.
+            if (world[x][y] === 'grass' && !world[x][y + 1] && !world[x][y + 2]) {
+              return { x: x + 0.5, y: y + 2 };
+            }
+          }
+        }
+      }
+      return { x: preferredX + 0.5, y: 35 };
+    }
+
+    // Calculate spawn position on grass
+    const centerX = Math.floor(WIDTH / 2);
+    const spawn = getGrassSpawn(centerX);
     const player = {
-      x: spawnX + 0.5,
-      y: spawnSurfaceHeight - 2,
+      x: spawn.x,
+      y: spawn.y,
       vx: 0,
       vy: 0,
       speed: 6,
@@ -309,11 +328,10 @@
       }
       // Regenerate terrain
       generateTerrain();
-      // Respawn player on surface
-      const respawnX = Math.floor(WIDTH / 2);
-      const spawnSurfaceHeight = 25 + Math.sin(respawnX * 0.05) * 8 + Math.sin(respawnX * 0.15) * 4 + Math.sin(respawnX * 0.3) * 2;
-      player.x = respawnX + 0.5;
-      player.y = spawnSurfaceHeight - 2;
+      // Respawn player on grass near map center
+      const respawn = getGrassSpawn(Math.floor(WIDTH / 2));
+      player.x = respawn.x;
+      player.y = respawn.y;
       player.vx = 0;
       player.vy = 0;
       // Clear mobs
