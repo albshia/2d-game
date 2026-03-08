@@ -576,8 +576,9 @@
     }
 
     function isOnLadder(){
-      const left = Math.floor(player.x - player.w/2), right = Math.floor(player.x + player.w/2);
-      const bottom = Math.floor(player.y - player.h/2), top = Math.floor(player.y + player.h/2);
+      const eps = 1e-6;
+      const left = Math.floor(player.x - player.w/2), right = Math.floor(player.x + player.w/2 - eps);
+      const bottom = Math.floor(player.y - player.h/2), top = Math.floor(player.y + player.h/2 - eps);
       for (let x = left; x <= right; x++) {
         for (let y = bottom; y <= top; y++) {
           if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT && world[x][y] === 'ladder') {
@@ -591,8 +592,8 @@
     function resolveCollisions(){
       const eps = 1e-3;
       let left = player.x - player.w/2, right = player.x + player.w/2, bottom = player.y - player.h/2, top = player.y + player.h/2;
-      const minX = Math.floor(left), maxX = Math.floor(right);
-      const minY = Math.floor(bottom), maxY = Math.floor(top);
+      const minX = Math.floor(left), maxX = Math.floor(right - eps);
+      const minY = Math.floor(bottom), maxY = Math.floor(top - eps);
       let grounded = false;
 
       for (let gx = minX; gx <= maxX; gx++){
@@ -1119,8 +1120,8 @@
         // Mob collision detection
         const eps = 1e-3;
         let left = mob.x - mob.w/2, right = mob.x + mob.w/2, bottom = mob.y - mob.h/2, top = mob.y + mob.h/2;
-        const minX = Math.floor(left), maxX = Math.floor(right);
-        const minY = Math.floor(bottom), maxY = Math.floor(top);
+        const minX = Math.floor(left), maxX = Math.floor(right - eps);
+        const minY = Math.floor(bottom), maxY = Math.floor(top - eps);
         let grounded = false;
 
         for (let gx = minX; gx <= maxX; gx++){
