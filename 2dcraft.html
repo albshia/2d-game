@@ -1690,6 +1690,7 @@
         let left = mob.x - mob.w/2, right = mob.x + mob.w/2, bottom = mob.y - mob.h/2, top = mob.y + mob.h/2;
         const minX = Math.floor(left), maxX = Math.floor(right - eps);
         const minY = Math.floor(bottom), maxY = Math.floor(top - eps);
+        let hitWallX = false;
 
         for (let gx = minX; gx <= maxX; gx++){
           for (let gy = minY; gy <= maxY; gy++){
@@ -1701,6 +1702,7 @@
               if (overlapX < overlapY){
                 if (mob.x < gx+0.5) mob.x -= overlapX + eps; else mob.x += overlapX + eps;
                 mob.vx = 0;
+                hitWallX = true;
               } else {
                 if (mob.y < gy+0.5){ mob.y -= overlapY + eps; mob.vy = 0; } else { mob.y += overlapY + eps; mob.vy = 0; }
               }
@@ -1708,6 +1710,17 @@
             }
           }
         }
+
+        // Strong fallback: if grounded and blocked horizontally, hop over one-block obstacles.
+        if (hitWallX && isMobGrounded(mob)) {
+          const dir = (mob.facing || mob.direction || 1) >= 0 ? 1 : -1;
+          const probeX = Math.floor(mob.x + dir * (mob.w / 2 + 0.1));
+          const footY = Math.floor(mob.y - mob.h / 2 + 0.08);
+          if (isSolid(probeX, footY) && !isSolid(probeX, footY + 1)) {
+            mob.vy = Math.max(mob.vy, 8.6);
+          }
+        }
+
         mob.x = Math.max(0.2, Math.min(WIDTH-0.2, mob.x));
         mob.y = Math.max(0.2, Math.min(HEIGHT-0.2, mob.y));
       });
