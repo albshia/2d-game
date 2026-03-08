@@ -252,8 +252,10 @@
       h: 2.0,
       facing: 1,
       walkCycle: 0,
-      grounded: false
+      grounded: false,
+      handActionTimer: 0
     };
+    const HAND_ACTION_DURATION = 0.16;
     const keys = { left:false, right:false, jump:false, down:false };
 
     // Mob system
@@ -348,6 +350,7 @@
       const gx = Math.floor(worldPx / tileSize);
       const gy = Math.floor(worldPy / tileSize);
       if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT) return;
+      let acted = false;
 
       if (e.button === 0 || mouseButtons.left) {
         // Break block
@@ -361,9 +364,11 @@
           delete doorStates[key2];
           delete doorStates[key3];
           world[gx][gy] = null;
+          acted = true;
           if (gy > 0 && world[gx][gy-1] === 'door') world[gx][gy-1] = null;
           if (gy < HEIGHT-1 && world[gx][gy+1] === 'door') world[gx][gy+1] = null;
         } else {
+          if (world[gx][gy] !== null) acted = true;
           world[gx][gy] = null;
         }
       } else if (e.button === 1 || e.button === 2) {
@@ -382,14 +387,20 @@
             if (gy > 0 && gy < HEIGHT-1 && !world[gx][gy] && !world[gx][gy-1]) {
               world[gx][gy] = 'door';
               world[gx][gy-1] = 'door';
+              acted = true;
               // Initialize door state as closed
               const key = `${gx},${gy}`;
               doorStates[key] = false;
             }
           } else {
+            if (world[gx][gy] !== selectedBlock) acted = true;
             world[gx][gy] = selectedBlock;
           }
         }
+      }
+
+      if (acted) {
+        player.handActionTimer = HAND_ACTION_DURATION;
       }
     }
 
@@ -516,6 +527,12 @@
       const dir = facing >= 0 ? 1 : -1;
       const legSwing = moving ? Math.sin(walkCycle) * pixel * 0.9 : 0;
       const armSwing = moving ? -Math.sin(walkCycle) * pixel * 0.8 : 0;
+      const actionProgress = player.handActionTimer > 0
+        ? 1 - (player.handActionTimer / HAND_ACTION_DURATION)
+        : 0;
+      const actionLift = player.handActionTimer > 0
+        ? Math.sin(actionProgress * Math.PI) * pixel * 3.2
+        : 0;
 
       const headW = 8 * pixel, headH = 8 * pixel;
       const bodyW = 8 * pixel, bodyH = 12 * pixel;
@@ -546,12 +563,14 @@
       ctx.fillStyle = '#4aa3df';
       ctx.fillRect(bodyX, bodyY, bodyW, bodyH);
       const sleeveHeight = 4 * pixel;
+      const leftArmY = bodyY + armSwing + (dir < 0 ? -actionLift : 0);
+      const rightArmY = bodyY - armSwing + (dir > 0 ? -actionLift : 0);
       ctx.fillStyle = '#4aa3df';
-      ctx.fillRect(bodyX - limbW, bodyY + armSwing, limbW, sleeveHeight);
-      ctx.fillRect(bodyX + bodyW, bodyY - armSwing, limbW, sleeveHeight);
+      ctx.fillRect(bodyX - limbW, leftArmY, limbW, sleeveHeight);
+      ctx.fillRect(bodyX + bodyW, rightArmY, limbW, sleeveHeight);
       ctx.fillStyle = '#ddb289';
-      ctx.fillRect(bodyX - limbW, bodyY + armSwing + sleeveHeight, limbW, limbH - sleeveHeight);
-      ctx.fillRect(bodyX + bodyW, bodyY - armSwing + sleeveHeight, limbW, limbH - sleeveHeight);
+      ctx.fillRect(bodyX - limbW, leftArmY + sleeveHeight, limbW, limbH - sleeveHeight);
+      ctx.fillRect(bodyX + bodyW, rightArmY + sleeveHeight, limbW, limbH - sleeveHeight);
 
       // Pants/legs
       ctx.fillStyle = '#7b3fc8';
@@ -564,8 +583,8 @@
       ctx.lineWidth = 1;
       ctx.strokeRect(headX, headY, headW, headH);
       ctx.strokeRect(bodyX, bodyY, bodyW, bodyH);
-      ctx.strokeRect(bodyX - limbW, bodyY + armSwing, limbW, limbH);
-      ctx.strokeRect(bodyX + bodyW, bodyY - armSwing, limbW, limbH);
+      ctx.strokeRect(bodyX - limbW, leftArmY, limbW, limbH);
+      ctx.strokeRect(bodyX + bodyW, rightArmY, limbW, limbH);
       ctx.strokeRect(bodyX, bodyY + bodyH + legSwing, limbW, limbH);
       ctx.strokeRect(bodyX + bodyW - limbW, bodyY + bodyH - legSwing, limbW, limbH);
     }
@@ -707,6 +726,9 @@
     function loop(t){
       const dt = Math.min((t-last)/1000, 0.05); last = t;
       // input
+      if (player.handActionTimer > 0) {
+        player.handActionTimer = Math.max(0, player.handActionTimer - dt);
+      }
       let ax = 0;
       if (keys.left) ax -= 1; if (keys.right) ax += 1;
       const targetVx = ax * player.speed;
