@@ -317,7 +317,7 @@
 
     function initClouds() {
       clouds = [];
-      const count = 34;
+      const count = 140;
       for (let i = 0; i < count; i++) {
         const cols = 9 + Math.floor(Math.random() * 8);   // 9-16
         const rows = 4 + Math.floor(Math.random() * 4);   // 4-7
@@ -958,7 +958,7 @@
       }
 
       // Pixel clouds: fewer in clear weather, more in rain.
-      const cloudCount = weather === 'rain' ? Math.floor(clouds.length * 0.9) : Math.floor(clouds.length * 0.45);
+      const cloudCount = weather === 'rain' ? clouds.length : Math.floor(clouds.length * 0.72);
       const cloudColor = weather === 'rain'
         ? (brightness < 0.5 ? 'rgba(120,130,145,0.52)' : 'rgba(155,165,180,0.66)')
         : (brightness < 0.5 ? 'rgba(190,200,220,0.28)' : 'rgba(250,255,255,0.72)');
