@@ -321,17 +321,19 @@
       for (let i = 0; i < count; i++) {
         const cols = 9 + Math.floor(Math.random() * 8);   // 9-16
         const rows = 4 + Math.floor(Math.random() * 4);   // 4-7
-        const pixel = 7 + Math.floor(Math.random() * 7);  // 7-13 px cloud blocks
+        const cell = 0.7 + Math.random() * 0.5;           // Cloud block size in world tiles
         const seed = Math.random() * 10000;
-        const width = cols * pixel;
+        const widthTiles = cols * cell;
+        const heightTiles = rows * cell;
         clouds.push({
-          x: Math.random() * (innerWidth + 500) - 250,
-          y: 8 + Math.random() * (innerHeight * 0.2),
-          speed: 7 + Math.random() * 13,
+          cx: Math.random() * (WIDTH + 16) - 8,
+          cy: HEIGHT * 0.82 + Math.random() * (HEIGHT * 0.12),
+          speed: 0.28 + Math.random() * 0.44, // tiles per second
           cols,
           rows,
-          pixel,
-          width,
+          cell,
+          widthTiles,
+          heightTiles,
           mask: buildCloudMask(cols, rows, seed)
         });
       }
@@ -963,8 +965,13 @@
       ctx.fillStyle = cloudColor;
       for (let i = 0; i < cloudCount; i++) {
         const c = clouds[i];
+        const cellPx = c.cell * tileSize;
+        const cloudW = c.widthTiles * tileSize;
+        const cloudH = c.heightTiles * tileSize;
+        const cloudX = c.cx * tileSize - cam.x - cloudW / 2;
+        const cloudY = canvas.height - (c.cy * tileSize - cam.y) - cloudH / 2;
         for (const cell of c.mask) {
-          ctx.fillRect(c.x + cell.x * c.pixel, c.y + cell.y * c.pixel, c.pixel, c.pixel);
+          ctx.fillRect(cloudX + cell.x * cellPx, cloudY + cell.y * cellPx, cellPx, cellPx);
         }
       }
 
@@ -1055,10 +1062,10 @@
       }
       // Cloud drift
       for (const c of clouds) {
-        c.x += c.speed * dt * (weather === 'rain' ? 1.2 : 1.0);
-        if (c.x > canvas.width + 120) {
-          c.x = -c.width - 80 - Math.random() * 160;
-          c.y = 8 + Math.random() * (canvas.height * 0.2);
+        c.cx += c.speed * dt * (weather === 'rain' ? 1.2 : 1.0);
+        if (c.cx - c.widthTiles / 2 > WIDTH + 8) {
+          c.cx = -8 - c.widthTiles / 2;
+          c.cy = HEIGHT * 0.82 + Math.random() * (HEIGHT * 0.12);
         }
       }
       let ax = 0;
