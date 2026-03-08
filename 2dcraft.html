@@ -1175,10 +1175,35 @@
     function drawCreeperMob(mob, screenX, screenY, wPx, hPx, moving) {
       const walk = moving ? Math.sin(mob.walkCycle) * (hPx * 0.03) : 0;
       const pixel = Math.max(1, Math.floor(Math.min(wPx, hPx) / 12));
+      const headX = screenX + wPx * 0.2;
+      const headY = screenY;
+      const headW = wPx * 0.6;
+      const headH = hPx * 0.32;
       const bodyX = screenX + wPx * 0.14;
-      const bodyY = screenY;
+      const bodyY = headY + headH + pixel * 0.6; // visible separation between head and body
       const bodyW = wPx * 0.72;
-      const bodyH = hPx * 0.78;
+      const bodyH = hPx * 0.46;
+
+      // Head
+      ctx.fillStyle = '#67b64b';
+      ctx.fillRect(headX, headY, headW, headH);
+      ctx.fillStyle = '#4b9a3b';
+      for (let y = 0; y < headH; y += pixel * 2) {
+        for (let x = 0; x < headW; x += pixel * 2) {
+          if (((x / pixel) + (y / pixel)) % 3 === 0) {
+            ctx.fillRect(headX + x, headY + y, pixel, pixel);
+          }
+        }
+      }
+      // Head face
+      const faceY = headY + headH * 0.2;
+      ctx.fillStyle = '#111';
+      ctx.fillRect(headX + headW * 0.23, faceY, headW * 0.14, headH * 0.22);
+      ctx.fillRect(headX + headW * 0.63, faceY, headW * 0.14, headH * 0.22);
+      ctx.fillRect(headX + headW * 0.42, faceY + headH * 0.2, headW * 0.16, headH * 0.32);
+      ctx.fillRect(headX + headW * 0.32, faceY + headH * 0.38, headW * 0.36, headH * 0.12);
+      ctx.fillRect(headX + headW * 0.34, faceY + headH * 0.5, headW * 0.12, headH * 0.16);
+      ctx.fillRect(headX + headW * 0.54, faceY + headH * 0.5, headW * 0.12, headH * 0.16);
 
       // Base body
       ctx.fillStyle = '#67b64b';
@@ -1202,16 +1227,6 @@
         }
       }
 
-      // Classic creeper face
-      const faceY = bodyY + bodyH * 0.2;
-      ctx.fillStyle = '#111';
-      ctx.fillRect(bodyX + bodyW * 0.23, faceY, bodyW * 0.14, bodyH * 0.11);
-      ctx.fillRect(bodyX + bodyW * 0.63, faceY, bodyW * 0.14, bodyH * 0.11);
-      ctx.fillRect(bodyX + bodyW * 0.42, faceY + bodyH * 0.12, bodyW * 0.16, bodyH * 0.2);
-      ctx.fillRect(bodyX + bodyW * 0.32, faceY + bodyH * 0.26, bodyW * 0.36, bodyH * 0.1);
-      ctx.fillRect(bodyX + bodyW * 0.34, faceY + bodyH * 0.32, bodyW * 0.12, bodyH * 0.12);
-      ctx.fillRect(bodyX + bodyW * 0.54, faceY + bodyH * 0.32, bodyW * 0.12, bodyH * 0.12);
-
       // Four legs
       const legW = bodyW * 0.19;
       const legH = hPx * 0.22;
@@ -1225,6 +1240,7 @@
       // Outline
       ctx.strokeStyle = 'rgba(0,0,0,0.38)';
       ctx.lineWidth = 1;
+      ctx.strokeRect(headX, headY, headW, headH);
       ctx.strokeRect(bodyX, bodyY, bodyW, bodyH);
     }
 
