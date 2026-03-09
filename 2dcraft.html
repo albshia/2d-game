@@ -827,11 +827,12 @@
       gold_ore: 1.9,
       diamond_ore: 2.2
     };
-    let miningState = { active: false, gx: 0, gy: 0, progress: 0 };
+    let miningState = { active: false, gx: 0, gy: 0, progress: 0, required: 0 };
 
     function resetMining() {
       miningState.active = false;
       miningState.progress = 0;
+      miningState.required = 0;
     }
 
     function getMouseGridTarget() {
@@ -861,6 +862,36 @@
       player.handActionSide = (gx + 0.5) >= player.x ? 1 : -1;
       player.handActionTimer = HAND_ACTION_DURATION;
       return true;
+    }
+
+    function drawMiningCracks(cam) {
+      if (!miningState.active || miningState.required <= 0) return;
+      const gx = miningState.gx, gy = miningState.gy;
+      if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT || !world[gx][gy]) return;
+
+      const progress = Math.max(0, Math.min(1, miningState.progress / miningState.required));
+      if (progress <= 0) return;
+
+      const sx = gx * tileSize - cam.x;
+      const sy = canvas.height - ((gy + 1) * tileSize - cam.y);
+      const lineCount = Math.max(1, Math.ceil(progress * 10));
+      const alpha = 0.18 + progress * 0.55;
+      const segs = [
+        [0.12,0.14,0.48,0.28], [0.52,0.26,0.86,0.1], [0.42,0.42,0.76,0.56],
+        [0.18,0.52,0.4,0.82], [0.62,0.56,0.82,0.86], [0.1,0.34,0.22,0.64],
+        [0.48,0.14,0.5,0.52], [0.28,0.7,0.62,0.92], [0.72,0.34,0.9,0.62],
+        [0.3,0.18,0.7,0.76]
+      ];
+
+      ctx.strokeStyle = `rgba(20,20,20,${alpha})`;
+      ctx.lineWidth = Math.max(1, tileSize * 0.08);
+      for (let i = 0; i < lineCount; i++) {
+        const s = segs[i];
+        ctx.beginPath();
+        ctx.moveTo(sx + s[0] * tileSize, sy + s[1] * tileSize);
+        ctx.lineTo(sx + s[2] * tileSize, sy + s[3] * tileSize);
+        ctx.stroke();
+      }
     }
 
     function handleBlockAction(e) {
@@ -1646,6 +1677,7 @@
       } else {
         drawSteve(screenX, screenY, charPixel, player.facing, player.walkCycle, moving);
       }
+      drawMiningCracks(cam);
       if (player.hurtTimer > 0) {
         ctx.fillStyle = 'rgba(255, 45, 45, 0.35)';
         ctx.fillRect(screenX, screenY, player.w * tileSize, player.h * tileSize);
@@ -1745,6 +1777,7 @@
           }
           const blockId = world[gx][gy];
           const required = BREAK_TIME[blockId] ?? 0.8;
+          miningState.required = required;
           if (Number.isFinite(required)) {
             miningState.progress += dt;
             if (miningState.progress >= required) {
