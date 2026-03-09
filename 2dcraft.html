@@ -1631,6 +1631,11 @@
       // clamp within world
       player.x = Math.max(0.2, Math.min(WIDTH-0.2, player.x));
       player.y = Math.max(0.2, Math.min(HEIGHT-0.2, player.y));
+      if (player.y < -1) {
+        player.health = 0;
+        updateHealthUI();
+        respawnPlayer();
+      }
 
       // Update hostile arrows
       for (let i = hostileArrows.length - 1; i >= 0; i--) {
