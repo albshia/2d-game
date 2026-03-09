@@ -367,7 +367,9 @@
       health: 20,
       invulnTimer: 0,
       attackCooldown: 0,
-      hurtTimer: 0
+      hurtTimer: 0,
+      regenDelay: 0,
+      regenAccum: 0
     };
     let spawnPoint = { x: spawn.x, y: spawn.y };
     const PLAYER_COLLIDER_H = 1.9;
@@ -406,6 +408,8 @@
       player.vy = 0;
       player.health = player.maxHealth;
       player.invulnTimer = 1.0;
+      player.regenDelay = 0;
+      player.regenAccum = 0;
       updateHealthUI();
     }
 
@@ -414,6 +418,8 @@
       player.hurtTimer = 0.25;
       player.health = Math.max(0, player.health - amount);
       player.invulnTimer = 0.45;
+      player.regenDelay = 4.0; // Wait before regenerating again.
+      player.regenAccum = 0;
       updateHealthUI();
       if (player.health <= 0) {
         respawnPlayer();
@@ -1590,6 +1596,16 @@
       }
       if (player.hurtTimer > 0) {
         player.hurtTimer = Math.max(0, player.hurtTimer - dt);
+      }
+      if (player.regenDelay > 0) {
+        player.regenDelay = Math.max(0, player.regenDelay - dt);
+      } else if (player.health > 0 && player.health < player.maxHealth) {
+        player.regenAccum += dt;
+        if (player.regenAccum >= 1.0) {
+          player.regenAccum = 0;
+          player.health = Math.min(player.maxHealth, player.health + 1);
+          updateHealthUI();
+        }
       }
       // Cloud drift
       for (const c of clouds) {
