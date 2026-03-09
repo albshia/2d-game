@@ -496,6 +496,9 @@
       player.invulnTimer = 1.0;
       player.regenDelay = 0;
       player.regenAccum = 0;
+      for (let i = 0; i < hotbarInventory.length; i++) hotbarInventory[i] = null;
+      selected = 0;
+      renderHotbar();
       updateHealthUI();
     }
 
