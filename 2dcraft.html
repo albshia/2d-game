@@ -177,6 +177,10 @@
       { id: 'iron_ore', color: '#b87333' },
       { id: 'gold_ore', color: '#d4af37' },
       { id: 'diamond_ore', color: '#42d4f4' },
+      { id: 'coal', color: '#2f2f2f' },
+      { id: 'iron', color: '#c7c7c7' },
+      { id: 'gold', color: '#ffd54f' },
+      { id: 'diamond', color: '#7ee7ff' },
     ];
     let selected = 0;
     const HOTBAR_SIZE = 10;
@@ -189,6 +193,13 @@
       const def = BLOCK_BY_ID[id];
       if (!def) return id;
       return def.id.charAt(0).toUpperCase() + def.id.slice(1);
+    }
+    function getDropItemId(blockId){
+      if (blockId === 'coal_ore') return 'coal';
+      if (blockId === 'iron_ore') return 'iron';
+      if (blockId === 'gold_ore') return 'gold';
+      if (blockId === 'diamond_ore') return 'diamond';
+      return blockId;
     }
     function addItemToInventory(id, amount = 1){
       if (!BLOCK_BY_ID[id]) return false;
@@ -852,7 +863,7 @@
           acted = true;
         } else {
           if (world[gx][gy] !== null) {
-            addItemToInventory(world[gx][gy], 1);
+            addItemToInventory(getDropItemId(world[gx][gy]), 1);
             acted = true;
           }
           world[gx][gy] = null;
