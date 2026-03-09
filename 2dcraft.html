@@ -469,9 +469,9 @@
       hostileArrows.push({
         x: spawnX,
         y: spawnY,
-        vx: dir * 11.5,
-        vy: 0.6,
-        life: 2.8,
+        vx: dir * 13.0,
+        vy: 0.8,
+        life: 4.0,
         damage: 3
       });
     }
@@ -1658,7 +1658,7 @@
       for (let i = hostileArrows.length - 1; i >= 0; i--) {
         const a = hostileArrows[i];
         a.life -= dt;
-        a.vy += -9 * dt;
+        a.vy += -6.5 * dt;
         a.x += a.vx * dt;
         a.y += a.vy * dt;
 
