@@ -1645,9 +1645,9 @@
         player.walkCycle += dt * 14;
       }
 
-      // clamp within world
+      // Clamp horizontal bounds; allow falling below world so void death can trigger.
       player.x = Math.max(0.2, Math.min(WIDTH-0.2, player.x));
-      player.y = Math.max(0.2, Math.min(HEIGHT-0.2, player.y));
+      player.y = Math.min(HEIGHT-0.2, player.y);
       if (player.y < -1) {
         player.health = 0;
         updateHealthUI();
@@ -1801,10 +1801,14 @@
         }
 
         mob.x = Math.max(0.2, Math.min(WIDTH-0.2, mob.x));
-        mob.y = Math.max(0.2, Math.min(HEIGHT-0.2, mob.y));
+        mob.y = Math.min(HEIGHT-0.2, mob.y);
+        if (mob.y < -1) {
+          if (mob.hostile) mob.health = 0;
+          else mob.dead = true;
+        }
       });
 
-      mobs = mobs.filter(m => !m.hostile || m.health > 0);
+      mobs = mobs.filter(m => !m.dead && (!m.hostile || m.health > 0));
 
       draw();
       requestAnimationFrame(loop);
