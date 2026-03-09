@@ -418,7 +418,7 @@
       player.hurtTimer = 0.25;
       player.health = Math.max(0, player.health - amount);
       player.invulnTimer = 0.45;
-      player.regenDelay = 4.0; // Wait before regenerating again.
+      player.regenDelay = 6.0; // Wait before regenerating again.
       player.regenAccum = 0;
       updateHealthUI();
       if (player.health <= 0) {
@@ -1601,7 +1601,7 @@
         player.regenDelay = Math.max(0, player.regenDelay - dt);
       } else if (player.health > 0 && player.health < player.maxHealth) {
         player.regenAccum += dt;
-        if (player.regenAccum >= 1.0) {
+        if (player.regenAccum >= 2.0) {
           player.regenAccum = 0;
           player.health = Math.min(player.maxHealth, player.health + 1);
           updateHealthUI();
