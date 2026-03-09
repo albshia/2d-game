@@ -141,14 +141,6 @@
     </div>
 
     <div style="background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 10px; backdrop-filter: blur(6px);">
-      <div style="color: rgba(255,255,255,.9); font-size: 12px; margin-bottom: 8px;">Mobs</div>
-      <button id="spawnCow" style="background: #8B4513; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px; margin-right: 4px;">Cow</button>
-      <button id="spawnSheep" style="background: #FFFFFF; color: black; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px; margin-right: 4px;">Sheep</button>
-      <button id="spawnPig" style="background: #FFC0CB; color: black; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px; margin-right: 4px;">Pig</button>
-      <button id="despawnAll" style="background: #f44336; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px;">Despawn All</button>
-    </div>
-
-    <div style="background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 10px; backdrop-filter: blur(6px);">
       <div style="color: rgba(255,255,255,.9); font-size: 12px; margin-bottom: 8px;">World</div>
       <button id="regenerateMap" style="background: #4caf50; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px;">Regenerate Map</button>
     </div>
@@ -175,6 +167,10 @@
       { id: 'ladder', color: '#a0522d' },
       { id: 'door', color: '#654321' },
       { id: 'glass', color: '#e0f7fa' },
+      { id: 'coal_ore', color: '#5a5a5a' },
+      { id: 'iron_ore', color: '#b87333' },
+      { id: 'gold_ore', color: '#d4af37' },
+      { id: 'diamond_ore', color: '#42d4f4' },
     ];
     let selected = 0;
 
@@ -202,9 +198,9 @@
       // Create height map with smooth transitions
       const heightMap = [];
       for (let x = 0; x < WIDTH; x++) {
-        let h = 30; // Base height
-        h += Math.sin(x * 0.01) * 2; // Very gentle, very large wave
-        h += Math.sin(x * 0.05) * 1; // Extremely gentle wave
+        let h = 90; // 3x deeper world base
+        h += Math.sin(x * 0.01) * 6; // Broad wave
+        h += Math.sin(x * 0.05) * 3; // Smaller variation
         heightMap[x] = Math.floor(h);
       }
 
@@ -308,6 +304,33 @@
           }
         }
       }
+
+      // Natural ore generation in stone layer.
+      function carveOreVeins(oreId, minDepth, maxDepth, veinCount, veinSizeMin, veinSizeMax) {
+        for (let i = 0; i < veinCount; i++) {
+          const x = Math.floor(Math.random() * WIDTH);
+          const depth = minDepth + Math.random() * (maxDepth - minDepth);
+          const y = Math.max(1, Math.floor(heightMap[x] - depth));
+          const steps = Math.floor(veinSizeMin + Math.random() * (veinSizeMax - veinSizeMin + 1));
+          let vx = x;
+          let vy = y;
+          for (let s = 0; s < steps; s++) {
+            vx += Math.floor(Math.random() * 3) - 1;
+            vy += Math.floor(Math.random() * 3) - 1;
+            if (vx < 1 || vx >= WIDTH - 1 || vy < 1 || vy >= HEIGHT - 1) continue;
+            const depthFromSurface = heightMap[vx] - vy;
+            if (depthFromSurface >= minDepth && depthFromSurface <= maxDepth && world[vx][vy] === 'stone') {
+              world[vx][vy] = oreId;
+            }
+          }
+        }
+      }
+
+      carveOreVeins('coal_ore', 8, 70, 220, 4, 10);
+      carveOreVeins('iron_ore', 16, 95, 170, 3, 8);
+      carveOreVeins('gold_ore', 38, 120, 100, 3, 7);
+      carveOreVeins('diamond_ore', 60, 150, 60, 2, 5);
+
       // Post-processing: cover exposed dirt with grass and avoid exposed stone near surface.
       for (let x = 0; x < WIDTH; x++) {
         for (let y = 0; y < HEIGHT; y++) {
@@ -343,7 +366,7 @@
           }
         }
       }
-      return { x: preferredX + 0.5, y: 35 };
+      return { x: preferredX + 0.5, y: 95 };
     }
 
     // Calculate spawn position on grass
@@ -572,12 +595,6 @@
     document.getElementById('weatherClear').onclick = () => { weather = 'clear'; };
     document.getElementById('weatherRain').onclick = () => { weather = 'rain'; };
 
-    // Mob controls
-    document.getElementById('spawnCow').onclick = () => { spawnMob('cow'); };
-    document.getElementById('spawnSheep').onclick = () => { spawnMob('sheep'); };
-    document.getElementById('spawnPig').onclick = () => { spawnMob('pig'); };
-    document.getElementById('despawnAll').onclick = () => { mobs = []; hostileArrows = []; };
-
     // World controls
     document.getElementById('regenerateMap').onclick = () => {
       // Clear the world
@@ -708,13 +725,9 @@
           if (caveTop <= 3) continue;
           y = 2 + Math.random() * (caveTop - 2);
         } else if (mode === 'rain_day') {
-          if (Math.random() < 0.65) {
-            y = surface + h / 2 + 0.05;
-          } else {
-            const caveTop = Math.max(3, surface - 8);
-            if (caveTop <= 3) continue;
-            y = 2 + Math.random() * (caveTop - 2);
-          }
+          const caveTop = Math.max(3, surface - 8);
+          if (caveTop <= 3) continue;
+          y = 2 + Math.random() * (caveTop - 2);
         } else {
           // Night: anywhere (surface and caves)
           if (Math.random() < 0.55) {
@@ -1391,17 +1404,17 @@
     function autoSpawnHostiles(dt) {
       const hostileCount = mobs.filter(m => m.hostile).length;
       let mode = 'cave';
-      let cap = 8;
-      let interval = 7.5;
+      let cap = 14;
+      let interval = 3.6;
 
       if (isNightTime()) {
         mode = 'night_any';
-        cap = 26;
-        interval = 2.3;
+        cap = 38;
+        interval = 1.3;
       } else if (weather === 'rain') {
         mode = 'rain_day';
-        cap = 10;
-        interval = 6.0;
+        cap = 16;
+        interval = 2.7;
       }
 
       if (hostileCount >= cap) return;
