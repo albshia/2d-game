@@ -1725,9 +1725,9 @@
                   player.health = 0;
                   updateHealthUI();
                   respawnPlayer();
-                } else if (blastDist < 3.5) {
+                } else if (blastDist < 5.0) {
                   // Further from center: heavy but non-lethal-style blast damage.
-                  const t = (blastDist - 1.9) / (3.5 - 1.9); // 0 near core -> 1 at edge
+                  const t = (blastDist - 1.9) / (5.0 - 1.9); // 0 near core -> 1 at edge
                   const dmg = 10 - t * 7; // ~10 down to ~3
                   damagePlayer(Math.max(2, dmg));
                 }
