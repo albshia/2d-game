@@ -88,6 +88,12 @@
       text-shadow: 0 1px 2px rgba(0,0,0,.7);
       white-space: nowrap;
     }
+    .slot .count {
+      position: absolute; right: 6px; bottom: 4px;
+      font-size: 12px; color: rgba(255,255,255,.95);
+      text-shadow: 0 1px 2px rgba(0,0,0,.8);
+      font-weight: 700;
+    }
     #hint {
       position: fixed; left: 14px; top: 14px;
       color: rgba(255,255,255,.9);
@@ -173,18 +179,63 @@
       { id: 'diamond_ore', color: '#42d4f4' },
     ];
     let selected = 0;
+    const HOTBAR_SIZE = 10;
+    const MAX_STACK = 64;
+    const hotbarInventory = Array.from({length: HOTBAR_SIZE}, () => null);
+    const BLOCK_BY_ID = Object.fromEntries(BLOCKS.map(b => [b.id, b]));
 
     const hotbarEl = document.getElementById('hotbar');
+    function getItemLabel(id){
+      const def = BLOCK_BY_ID[id];
+      if (!def) return id;
+      return def.id.charAt(0).toUpperCase() + def.id.slice(1);
+    }
+    function addItemToInventory(id, amount = 1){
+      if (!BLOCK_BY_ID[id]) return false;
+      let remaining = amount;
+      for (let i = 0; i < HOTBAR_SIZE && remaining > 0; i++) {
+        const slot = hotbarInventory[i];
+        if (slot && slot.id === id && slot.count < MAX_STACK) {
+          const add = Math.min(MAX_STACK - slot.count, remaining);
+          slot.count += add;
+          remaining -= add;
+        }
+      }
+      for (let i = 0; i < HOTBAR_SIZE && remaining > 0; i++) {
+        if (!hotbarInventory[i]) {
+          const add = Math.min(MAX_STACK, remaining);
+          hotbarInventory[i] = { id, count: add };
+          remaining -= add;
+        }
+      }
+      if (remaining !== amount) renderHotbar();
+      return remaining === 0;
+    }
+    function consumeSelectedItem(amount = 1){
+      const slot = hotbarInventory[selected];
+      if (!slot || slot.count < amount) return false;
+      slot.count -= amount;
+      if (slot.count <= 0) hotbarInventory[selected] = null;
+      renderHotbar();
+      return true;
+    }
     function renderHotbar(){
       hotbarEl.innerHTML = '';
-      BLOCKS.forEach((b,i)=>{
+      for (let i = 0; i < HOTBAR_SIZE; i++) {
+        const item = hotbarInventory[i];
         const slot = document.createElement('div');
         slot.className = 'slot' + (i===selected? ' selected':'');
         const num = document.createElement('div'); num.className='num'; num.textContent = i === 9 ? '0' : (i+1);
-        const swatch = document.createElement('div'); swatch.className='swatch'; swatch.style.background = b.color;
-        const name = document.createElement('div'); name.className='block-name'; name.textContent = b.id.charAt(0).toUpperCase() + b.id.slice(1);
-        slot.appendChild(num); slot.appendChild(swatch); slot.appendChild(name); hotbarEl.appendChild(slot);
-      });
+        slot.appendChild(num);
+        if (item) {
+          const swatch = document.createElement('div'); swatch.className='swatch';
+          swatch.style.background = BLOCK_BY_ID[item.id].color;
+          const name = document.createElement('div'); name.className='block-name'; name.textContent = getItemLabel(item.id);
+          const count = document.createElement('div'); count.className='count'; count.textContent = String(item.count);
+          slot.appendChild(swatch); slot.appendChild(name); slot.appendChild(count);
+        }
+        hotbarEl.appendChild(slot);
+      }
     }
     renderHotbar();
     window.addEventListener('keydown', (e)=>{ const n = parseInt(e.key,10); if (!Number.isNaN(n) && ((n>=1 && n<=9) || n===0)){ selected = n === 0 ? 9 : n-1; renderHotbar(); } if (e.code==='Space' || e.code==='KeyW' || e.code==='ArrowUp') e.preventDefault(); });
@@ -552,7 +603,7 @@
     }
     initClouds();
 
-    window.addEventListener('keydown', e=>{ if (e.code==='KeyA' || e.code==='ArrowLeft') keys.left=true; if (e.code==='KeyD' || e.code==='ArrowRight') keys.right=true; if (e.code==='Space' || e.code==='KeyW' || e.code==='ArrowUp') keys.jump=true; if (e.code==='KeyS' || e.code==='ArrowDown') keys.down=true; const n = parseInt(e.key,10); if (!Number.isNaN(n) && n>=1 && n<=BLOCKS.length){ selected = n-1; renderHotbar(); } });
+    window.addEventListener('keydown', e=>{ if (e.code==='KeyA' || e.code==='ArrowLeft') keys.left=true; if (e.code==='KeyD' || e.code==='ArrowRight') keys.right=true; if (e.code==='Space' || e.code==='KeyW' || e.code==='ArrowUp') keys.jump=true; if (e.code==='KeyS' || e.code==='ArrowDown') keys.down=true; });
     window.addEventListener('keyup', e=>{ if (e.code==='KeyA' || e.code==='ArrowLeft') keys.left=false; if (e.code==='KeyD' || e.code==='ArrowRight') keys.right=false; if (e.code==='Space' || e.code==='KeyW' || e.code==='ArrowUp') keys.jump=false; if (e.code==='KeyS' || e.code==='ArrowDown') keys.down=false; });
 
     // Skin selector (Steve / Alex)
@@ -797,9 +848,13 @@
           delete doorStates[key];
           world[gx][lowerY] = null;
           if (lowerY + 1 < HEIGHT && world[gx][lowerY + 1] === 'door') world[gx][lowerY + 1] = null;
+          addItemToInventory('door', 1);
           acted = true;
         } else {
-          if (world[gx][gy] !== null) acted = true;
+          if (world[gx][gy] !== null) {
+            addItemToInventory(world[gx][gy], 1);
+            acted = true;
+          }
           world[gx][gy] = null;
         }
       } else if (e.button === 1 || e.button === 2) {
@@ -813,20 +868,26 @@
           const left = player.x - player.w/2, right = player.x + player.w/2, bottom = player.y - PLAYER_COLLIDER_H/2, top = player.y + PLAYER_COLLIDER_H/2;
           if (gx+1 > left && gx < right && gy+1 > bottom && gy < top) return;
 
-          const selectedBlock = BLOCKS[selected].id;
+          const selectedItem = hotbarInventory[selected];
+          if (!selectedItem || selectedItem.count <= 0) return;
+          const selectedBlock = selectedItem.id;
           if (selectedBlock === 'door') {
             // Place 2-block tall door from lower block (clicked) upward
             if (gy >= 0 && gy < HEIGHT-1 && !world[gx][gy] && !world[gx][gy+1]) {
               world[gx][gy] = 'door';
               world[gx][gy+1] = 'door';
+              consumeSelectedItem(1);
               acted = true;
               // Initialize door state on lower door block
               const key = `${gx},${gy}`;
               doorStates[key] = false;
             }
           } else {
-            if (world[gx][gy] !== selectedBlock) acted = true;
-            world[gx][gy] = selectedBlock;
+            if (world[gx][gy] !== selectedBlock) {
+              world[gx][gy] = selectedBlock;
+              consumeSelectedItem(1);
+              acted = true;
+            }
           }
         }
       }
