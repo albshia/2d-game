@@ -121,7 +121,7 @@
   <div id="hint">
     Click to lock mouse. <br/>
     Move: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> • Jump: <kbd>Space</kbd> • Sprint: <kbd>Shift</kbd> <br/>
-    Break: Left click • Place: Right click • Hotbar: <kbd>1</kbd>-<kbd>9</kbd><kbd>0</kbd>
+    Break: Hold left click • Place: Right click • Hotbar: <kbd>1</kbd>-<kbd>9</kbd><kbd>0</kbd>
   </div>
   <canvas id="game"></canvas>
   <div id="healthHud">
@@ -811,13 +811,60 @@
     let mouseButtons = { left: false, right: false };
     let blockTooltip = { show: false, x: 0, y: 0, blockName: '' };
     let doorStates = {}; // Track open/closed state of doors by coordinate
+    const BREAK_TIME = {
+      grass: 0.3,
+      dirt: 0.35,
+      stone: 1.25,
+      log: 0.9,
+      water: Infinity,
+      planks: 0.7,
+      bricks: 1.7,
+      ladder: 0.25,
+      door: 0.65,
+      glass: 0.15,
+      coal_ore: 1.35,
+      iron_ore: 1.65,
+      gold_ore: 1.9,
+      diamond_ore: 2.2
+    };
+    let miningState = { active: false, gx: 0, gy: 0, progress: 0 };
 
-    function handleBlockAction(e) {
+    function resetMining() {
+      miningState.active = false;
+      miningState.progress = 0;
+    }
+
+    function getMouseGridTarget() {
       const cam = getCameraOffset();
       const worldPx = mouse.x + cam.x;
       const worldPy = (canvas.height - mouse.y) + cam.y;
       const gx = Math.floor(worldPx / tileSize);
       const gy = Math.floor(worldPy / tileSize);
+      return { gx, gy, worldPx, worldPy };
+    }
+
+    function breakBlockAt(gx, gy) {
+      if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT) return false;
+      const block = world[gx][gy];
+      if (!block) return false;
+      if (block === 'door') {
+        const lowerY = (gy > 0 && world[gx][gy - 1] === 'door') ? gy - 1 : gy;
+        const key = `${gx},${lowerY}`;
+        delete doorStates[key];
+        world[gx][lowerY] = null;
+        if (lowerY + 1 < HEIGHT && world[gx][lowerY + 1] === 'door') world[gx][lowerY + 1] = null;
+        addItemToInventory('door', 1);
+      } else {
+        addItemToInventory(getDropItemId(block), 1);
+        world[gx][gy] = null;
+      }
+      player.handActionSide = (gx + 0.5) >= player.x ? 1 : -1;
+      player.handActionTimer = HAND_ACTION_DURATION;
+      return true;
+    }
+
+    function handleBlockAction(e) {
+      const { gx, gy, worldPx, worldPy } = getMouseGridTarget();
       if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT) return;
       let acted = false;
 
@@ -849,24 +896,6 @@
           player.handActionSide = hostileTarget.x >= player.x ? 1 : -1;
           player.handActionTimer = HAND_ACTION_DURATION;
           return;
-        }
-        // Break block
-        const block = world[gx][gy];
-        if (block === 'door') {
-          // Break both parts of the door using its lower block as canonical position
-          const lowerY = getDoorLowerY(gx, gy);
-          const key = `${gx},${lowerY}`;
-          delete doorStates[key];
-          world[gx][lowerY] = null;
-          if (lowerY + 1 < HEIGHT && world[gx][lowerY + 1] === 'door') world[gx][lowerY + 1] = null;
-          addItemToInventory('door', 1);
-          acted = true;
-        } else {
-          if (world[gx][gy] !== null) {
-            addItemToInventory(getDropItemId(world[gx][gy]), 1);
-            acted = true;
-          }
-          world[gx][gy] = null;
         }
       } else if (e.button === 1 || e.button === 2) {
         // Middle click or right click on door toggles it
@@ -941,8 +970,8 @@
       }
 
       // Handle dragging
-      if (mouseButtons.left || mouseButtons.right) {
-        handleBlockAction({ button: mouseButtons.left ? 0 : 2 });
+      if (mouseButtons.right) {
+        handleBlockAction({ button: 2 });
       }
     });
 
@@ -955,6 +984,7 @@
     canvas.addEventListener('mouseup', e => {
       if (e.button === 0) mouseButtons.left = false;
       if (e.button === 2) mouseButtons.right = false;
+      if (e.button === 0) resetMining();
     });
 
     canvas.addEventListener('contextmenu', e => e.preventDefault());
@@ -1700,6 +1730,31 @@
           c.cx = -8 - c.widthTiles / 2;
           c.cy = HEIGHT * 0.44 + Math.random() * (HEIGHT * 0.38);
         }
+      }
+      // Timed block mining (hold left click).
+      if (mouseButtons.left) {
+        const { gx, gy } = getMouseGridTarget();
+        if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT || !world[gx][gy]) {
+          resetMining();
+        } else {
+          if (!miningState.active || miningState.gx !== gx || miningState.gy !== gy) {
+            miningState.active = true;
+            miningState.gx = gx;
+            miningState.gy = gy;
+            miningState.progress = 0;
+          }
+          const blockId = world[gx][gy];
+          const required = BREAK_TIME[blockId] ?? 0.8;
+          if (Number.isFinite(required)) {
+            miningState.progress += dt;
+            if (miningState.progress >= required) {
+              breakBlockAt(gx, gy);
+              resetMining();
+            }
+          }
+        }
+      } else {
+        resetMining();
       }
       let ax = 0;
       if (keys.left) ax -= 1; if (keys.right) ax += 1;
