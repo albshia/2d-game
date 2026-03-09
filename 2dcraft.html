@@ -1710,7 +1710,7 @@
           }
           if (mob.attackTimer > 0) mob.attackTimer = Math.max(0, mob.attackTimer - dt);
           if (mob.type === 'creeper') {
-            if (dist < 2.1 && Math.abs(dy) < 1.9) {
+            if (dist <= 4.0 && Math.abs(dy) < 2.5) {
               if (mob.fuseTimer < 0) mob.fuseTimer = CREEPER_FUSE_TIME;
             } else {
               mob.fuseTimer = -1;
