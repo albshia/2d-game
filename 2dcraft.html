@@ -1720,10 +1720,16 @@
               if (mob.fuseTimer <= 0) {
                 // Creeper dies on explosion; player dies if within blast radius.
                 explodeBlocksAt(mob.x, mob.y, 2.6);
-                if (Math.hypot(player.x - mob.x, player.y - mob.y) < 2.8) {
+                const blastDist = Math.hypot(player.x - mob.x, player.y - mob.y);
+                if (blastDist < 1.9) {
                   player.health = 0;
                   updateHealthUI();
                   respawnPlayer();
+                } else if (blastDist < 3.5) {
+                  // Further from center: heavy but non-lethal-style blast damage.
+                  const t = (blastDist - 1.9) / (3.5 - 1.9); // 0 near core -> 1 at edge
+                  const dmg = 10 - t * 7; // ~10 down to ~3
+                  damagePlayer(Math.max(2, dmg));
                 }
                 mob.health = 0;
                 return;
