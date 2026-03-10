@@ -758,6 +758,20 @@
       return (nearBlocked || farBlocked) && headroom;
     }
 
+    function canMobOccupyAt(mob, x, y) {
+      const eps = 1e-4;
+      const left = Math.floor(x - mob.w / 2 + eps);
+      const right = Math.floor(x + mob.w / 2 - eps);
+      const bottom = Math.floor(y - mob.h / 2 + eps);
+      const top = Math.floor(y + mob.h / 2 - eps);
+      for (let gx = left; gx <= right; gx++) {
+        for (let gy = bottom; gy <= top; gy++) {
+          if (isSolid(gx, gy)) return false;
+        }
+      }
+      return true;
+    }
+
     function findHostileSpawnPosition(mode, hostileType) {
       const w = hostileType.w;
       const h = hostileType.h;
@@ -1930,6 +1944,7 @@
         const minX = Math.floor(left), maxX = Math.floor(right - eps);
         const minY = Math.floor(bottom), maxY = Math.floor(top - eps);
         let hitWallX = false;
+        let steppedUp = false;
 
         for (let gx = minX; gx <= maxX; gx++){
           for (let gy = minY; gy <= maxY; gy++){
@@ -1939,6 +1954,19 @@
             const overlapY = Math.min(top, tileTop) - Math.max(bottom, tileBottom);
             if (overlapX > 0 && overlapY > 0){
               if (overlapX < overlapY){
+                const dir = (mob.vx >= 0 ? 1 : -1);
+                if (!steppedUp && isMobGrounded(mob) && shouldMobStepJump(mob)) {
+                  const stepX = mob.x + dir * 0.16;
+                  const stepY = mob.y + 1.02;
+                  if (canMobOccupyAt(mob, stepX, stepY)) {
+                    mob.x = stepX;
+                    mob.y = stepY;
+                    mob.vy = Math.max(mob.vy, 8.6);
+                    steppedUp = true;
+                    left = mob.x - mob.w/2; right = mob.x + mob.w/2; bottom = mob.y - mob.h/2; top = mob.y + mob.h/2;
+                    continue;
+                  }
+                }
                 if (mob.x < gx+0.5) mob.x -= overlapX + eps; else mob.x += overlapX + eps;
                 mob.vx = 0;
                 hitWallX = true;
