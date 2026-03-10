@@ -132,25 +132,8 @@
     <div id="hotbar"></div>
   </div>
 
-  <!-- Time and Weather Controls -->
+  <!-- Left Controls -->
   <div id="controls" style="position: fixed; left: 14px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px;">
-    <div style="background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 10px; backdrop-filter: blur(6px);">
-      <div style="color: rgba(255,255,255,.9); font-size: 12px; margin-bottom: 8px;">Time</div>
-      <button id="timeDay" style="background: #4caf50; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px; margin-right: 4px;">Day</button>
-      <button id="timeNight" style="background: #1a237e; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px;">Night</button>
-    </div>
-
-    <div style="background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 10px; backdrop-filter: blur(6px);">
-      <div style="color: rgba(255,255,255,.9); font-size: 12px; margin-bottom: 8px;">Weather</div>
-      <button id="weatherClear" style="background: #81c784; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px; margin-right: 4px;">Clear</button>
-      <button id="weatherRain" style="background: #42a5f5; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px;">Rain</button>
-    </div>
-
-    <div style="background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 10px; backdrop-filter: blur(6px);">
-      <div style="color: rgba(255,255,255,.9); font-size: 12px; margin-bottom: 8px;">World</div>
-      <button id="regenerateMap" style="background: #4caf50; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px;">Regenerate Map</button>
-    </div>
-
     <div style="background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 10px; backdrop-filter: blur(6px);">
       <div style="color: rgba(255,255,255,.9); font-size: 12px; margin-bottom: 8px;">Skin</div>
       <div id="skinSelector" style="display: flex; gap: 4px; flex-wrap: wrap;"></div>
@@ -653,31 +636,6 @@
       });
     }
     updateSkinSelector();
-
-    // Time and weather controls
-    document.getElementById('timeDay').onclick = () => { gameTime = 6000; }; // Day time
-    document.getElementById('timeNight').onclick = () => { gameTime = 18000; }; // Night time
-    document.getElementById('weatherClear').onclick = () => { weather = 'clear'; };
-    document.getElementById('weatherRain').onclick = () => { weather = 'rain'; };
-
-    // World controls
-    document.getElementById('regenerateMap').onclick = () => {
-      // Clear the world
-      for (let x = 0; x < WIDTH; x++) {
-        for (let y = 0; y < HEIGHT; y++) {
-          world[x][y] = null;
-        }
-      }
-      // Regenerate terrain
-      generateTerrain();
-      // Respawn player on grass near map center
-      const respawn = getGrassSpawn(Math.floor(WIDTH / 2));
-      spawnPoint = { x: respawn.x, y: respawn.y };
-      respawnPlayer();
-      // Clear mobs
-      mobs = [];
-      hostileArrows = [];
-    };
 
     // Spawn mob function
     function spawnMob(type) {
