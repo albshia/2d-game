@@ -1052,6 +1052,15 @@
       return block && block !== 'water' && block !== 'ladder'; // Water and ladder are not solid
     }
 
+    function hasOpenSkyAt(gx, gy){
+      if (gx < 0 || gx >= WIDTH) return true;
+      const startY = Math.max(gy + 1, 0);
+      for (let y = startY; y < HEIGHT; y++) {
+        if (isSolid(gx, y)) return false;
+      }
+      return true;
+    }
+
     function isOnLadder(){
       const eps = 1e-6;
       const left = Math.floor(player.x - player.w/2), right = Math.floor(player.x + player.w/2 - eps);
@@ -1645,6 +1654,11 @@
         for (let i = 0; i < 100; i++) {
           const x = Math.random() * canvas.width;
           const y = Math.random() * canvas.height;
+          const worldPx = x + cam.x;
+          const worldPy = (canvas.height - y) + cam.y;
+          const gx = Math.floor(worldPx / tileSize);
+          const gy = Math.floor(worldPy / tileSize);
+          if (!hasOpenSkyAt(gx, gy)) continue;
           ctx.fillRect(x, y, 1, 8);
         }
       }
