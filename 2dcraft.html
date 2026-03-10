@@ -843,6 +843,12 @@
           }
         }
         if (Math.abs(x + 0.5 - player.x) < 5) continue;
+        if (mode === 'cave' || mode === 'rain_day') {
+          const gx = Math.floor(x + 0.5);
+          const gy = Math.floor(y + h * 0.5);
+          // Daytime/rain daytime hostiles must spawn under a roof (inside caves).
+          if (hasOpenSkyAt(gx, gy)) continue;
+        }
         if (canSpawnEntityAt(x + 0.5, y, w, h)) {
           return { x: x + 0.5, y };
         }
