@@ -551,7 +551,23 @@
     let gameTime = 6000; // 0-24000 (Minecraft-like time), start at day time
     let weather = 'clear'; // 'clear', 'rain'
     let timeSpeed = 1; // How fast time passes
+    let weatherTimer = 45 + Math.random() * 85; // Seconds until next natural weather roll
     let clouds = [];
+
+    function rollNaturalWeather() {
+      if (weather === 'clear') {
+        // Mostly clear, occasional rain.
+        weather = Math.random() < 0.24 ? 'rain' : 'clear';
+      } else {
+        // Rain often clears, sometimes continues.
+        weather = Math.random() < 0.72 ? 'clear' : 'rain';
+      }
+      if (weather === 'rain') {
+        weatherTimer = 35 + Math.random() * 70; // Rain lasts ~35-105s
+      } else {
+        weatherTimer = 55 + Math.random() * 130; // Clear lasts ~55-185s
+      }
+    }
 
     function seededNoise(seed) {
       const v = Math.sin(seed * 12.9898) * 43758.5453123;
@@ -1705,6 +1721,11 @@
       }
       if (player.hurtTimer > 0) {
         player.hurtTimer = Math.max(0, player.hurtTimer - dt);
+      }
+      // Natural weather cycle
+      weatherTimer -= dt;
+      if (weatherTimer <= 0) {
+        rollNaturalWeather();
       }
       if (player.regenDelay > 0) {
         player.regenDelay = Math.max(0, player.regenDelay - dt);
