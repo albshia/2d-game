@@ -296,7 +296,7 @@
         const caveY = Math.max(3, Math.floor(heightMap[caveX] - caveDepth));
         const isBigCave = Math.random() < 0.1;
         const baseR = isBigCave ? (8 + Math.random() * 8) : (1.2 + Math.random() * 1.8);
-        const blobCount = isBigCave ? (5 + Math.floor(Math.random() * 5)) : (2 + Math.floor(Math.random() * 3));
+        const blobCount = isBigCave ? (5 + Math.floor(Math.random() * 5)) : (1 + Math.floor(Math.random() * 2));
 
         for (let b = 0; b < blobCount; b++) {
           const angle = Math.random() * Math.PI * 2;
@@ -308,17 +308,19 @@
           carveBlob(cx, cy, rx, ry);
         }
 
-        // Add winding tunnels; most are narrow, rare ones widen into caverns.
+        // Add winding tunnels; small caves are biased into long connected paths.
         let tx = caveX;
         let ty = caveY;
-        const tunnelSteps = isBigCave ? 24 : 36;
+        let tunnelAngle = Math.random() * Math.PI * 2;
+        const tunnelSteps = isBigCave ? 28 : 68;
         for (let s = 0; s < tunnelSteps; s++) {
-          tx += (Math.random() * 2.8 - 1.4);
-          ty += (Math.random() * 1.4 - 0.7);
+          tunnelAngle += (Math.random() * 2 - 1) * (isBigCave ? 0.42 : 0.2);
+          tx += Math.cos(tunnelAngle) * (isBigCave ? 1.7 : 2.0);
+          ty += Math.sin(tunnelAngle) * (isBigCave ? 1.0 : 0.5);
           if (isBigCave) {
             carveBlob(tx, ty, 3.6 + Math.random() * 2.0, 2.5 + Math.random() * 1.5);
           } else {
-            carveBlob(tx, ty, 0.7 + Math.random() * 0.55, 0.32 + Math.random() * 0.34);
+            carveBlob(tx, ty, 1.0 + Math.random() * 0.65, 0.5 + Math.random() * 0.4);
           }
         }
       }
