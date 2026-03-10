@@ -747,7 +747,6 @@
       const footY = mob.y - mob.h / 2;
       const gyFoot = Math.floor(footY + 0.06);
       const gyHead = gyFoot + 1;
-      const gyTop = gyFoot + 2;
 
       const probeXNear = Math.floor(mob.x + dir * (mob.w / 2 + 0.08));
       const probeXFar = Math.floor(mob.x + dir * (mob.w / 2 + 0.24));
@@ -755,7 +754,7 @@
       // A 1-block obstacle ahead with enough headroom above it.
       const nearBlocked = isSolid(probeXNear, gyFoot);
       const farBlocked = isSolid(probeXFar, gyFoot);
-      const headroom = !isSolid(probeXNear, gyHead) && !isSolid(probeXNear, gyTop);
+      const headroom = !isSolid(probeXNear, gyHead) && !isSolid(probeXFar, gyHead);
       return (nearBlocked || farBlocked) && headroom;
     }
 
@@ -1919,7 +1918,7 @@
         mob.walkCycle += dt * (6 + mob.speed * 2);
         mob.idleCycle += dt * 2.4;
         if (isMobGrounded(mob) && shouldMobStepJump(mob)) {
-          mob.vy = Math.max(mob.vy, 8.2);
+          mob.vy = Math.max(mob.vy, 9.2);
         }
         mob.vy += -25 * dt;
 
@@ -1957,7 +1956,9 @@
           const probeX = Math.floor(mob.x + dir * (mob.w / 2 + 0.1));
           const footY = Math.floor(mob.y - mob.h / 2 + 0.08);
           if (isSolid(probeX, footY) && !isSolid(probeX, footY + 1)) {
-            mob.vy = Math.max(mob.vy, 8.6);
+            mob.y += 1.02; // Direct 1-block step-up fallback when blocked.
+            mob.vy = Math.max(mob.vy, 9.4);
+            mob.vx = dir * Math.max(mob.speed * 0.6, 1.0);
           }
         }
 
