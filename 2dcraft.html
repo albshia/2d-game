@@ -2085,6 +2085,7 @@
         const minY = Math.floor(bottom), maxY = Math.floor(top - eps);
         let hitWallX = false;
         let steppedUp = false;
+        let landedThisFrame = false;
 
         for (let gx = minX; gx <= maxX; gx++){
           for (let gy = minY; gy <= maxY; gy++){
@@ -2111,7 +2112,14 @@
                 mob.vx = 0;
                 hitWallX = true;
               } else {
-                if (mob.y < gy+0.5){ mob.y -= overlapY + eps; mob.vy = 0; } else { mob.y += overlapY + eps; mob.vy = 0; }
+                if (mob.y < gy+0.5){
+                  mob.y -= overlapY + eps;
+                  mob.vy = 0;
+                } else {
+                  mob.y += overlapY + eps;
+                  mob.vy = 0;
+                  landedThisFrame = true;
+                }
               }
               left = mob.x - mob.w/2; right = mob.x + mob.w/2; bottom = mob.y - mob.h/2; top = mob.y + mob.h/2;
             }
@@ -2137,7 +2145,7 @@
         if (!mobGrounded && mob.vy < 0) {
           mob.maxFallSpeed = Math.max(mob.maxFallSpeed || 0, -mob.vy);
         }
-        if (mobGrounded && !mobWasGrounded) {
+        if ((mobGrounded && !mobWasGrounded) || landedThisFrame) {
           const impactSpeed = mob.maxFallSpeed || 0;
           if (impactSpeed > 9 && mob.health != null) {
             mob.hurtTimer = 0.25;
