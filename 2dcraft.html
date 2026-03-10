@@ -533,15 +533,21 @@
       }
     }
 
-    function fireSkeletonArrow(skeleton) {
+    function fireSkeletonArrow(skeleton, target) {
       const dir = skeleton.facing >= 0 ? 1 : -1;
       const spawnX = skeleton.x + dir * (skeleton.w * 0.48);
       const spawnY = skeleton.y + skeleton.h * 0.08;
+      const tx = target ? target.x : (skeleton.x + dir * 8);
+      const ty = target ? target.y : skeleton.y;
+      const dx = tx - spawnX;
+      const dy = ty - spawnY;
+      const len = Math.hypot(dx, dy) || 1;
+      const speed = 13.0;
       hostileArrows.push({
         x: spawnX,
         y: spawnY,
-        vx: dir * 13.0,
-        vy: 0.8,
+        vx: (dx / len) * speed,
+        vy: (dy / len) * speed,
         life: 4.0,
         damage: 3
       });
@@ -1871,7 +1877,7 @@
               mob.rangedCooldown = Math.max(0, mob.rangedCooldown - dt);
               // Skeletons keep chasing but attack by shooting.
               if (dist >= 3.5 && dist <= HOSTILE_AGGRO_RADIUS && Math.abs(dy) < 4.2 && mob.rangedCooldown <= 0) {
-                fireSkeletonArrow(mob);
+                fireSkeletonArrow(mob, player);
                 mob.rangedCooldown = 1.15 + Math.random() * 0.75;
               }
             }
