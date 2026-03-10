@@ -1829,11 +1829,17 @@
         player.vy += (climbSpeed - player.vy) * Math.min(15*dt, 1); // Smooth climbing
       }
       // jump (if grounded)
-      // apply movement
-      player.x += player.vx * dt;
-      player.y += player.vy * dt;
-
-      const grounded = resolveCollisions();
+      // Apply movement in sub-steps to avoid deep penetration at high fall speed.
+      const moveX = player.vx * dt;
+      const moveY = player.vy * dt;
+      const maxMove = Math.max(Math.abs(moveX), Math.abs(moveY));
+      const moveSteps = Math.max(1, Math.ceil(maxMove / 0.35));
+      let grounded = false;
+      for (let s = 0; s < moveSteps; s++) {
+        player.x += moveX / moveSteps;
+        player.y += moveY / moveSteps;
+        if (resolveCollisions()) grounded = true;
+      }
       player.grounded = grounded;
       if (grounded && keys.jump && !onLadder){ player.vy = 9.0; }
       if (Math.abs(player.vx) > 0.15 && grounded) {
