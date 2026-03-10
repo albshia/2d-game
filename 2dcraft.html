@@ -1983,6 +1983,16 @@
 
       // Update mobs
       mobs.forEach((mob) => {
+        if (mob.health == null) {
+          const base = mob.hostile ? HOSTILE_TYPES[mob.type] : MOB_TYPES[mob.type];
+          if (base && base.maxHealth) {
+            mob.maxHealth = base.maxHealth;
+            mob.health = base.maxHealth;
+          }
+        }
+        if (mob.maxFallSpeed == null) mob.maxFallSpeed = 0;
+        if (mob.grounded == null) mob.grounded = false;
+
         if (mob.hostile) {
           const dx = player.x - mob.x;
           const dy = player.y - mob.y;
