@@ -967,9 +967,9 @@
       if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT) return;
       let acted = false;
 
-      function findHostileAtPointer() {
+      function findMobAtPointer() {
         for (const mob of mobs) {
-          if (!mob.hostile || mob.health <= 0) continue;
+          if (mob.health != null && mob.health <= 0) continue;
           const left = mob.x - mob.w / 2, right = mob.x + mob.w / 2;
           const bottom = mob.y - mob.h / 2, top = mob.y + mob.h / 2;
           const wx = worldPx / tileSize;
@@ -988,11 +988,11 @@
       }
 
       if (e.button === 0 || mouseButtons.left) {
-        const hostileTarget = findHostileAtPointer();
-        if (hostileTarget && player.attackCooldown <= 0) {
-          damageMob(hostileTarget, 4); // Punch damage
+        const mobTarget = findMobAtPointer();
+        if (mobTarget && player.attackCooldown <= 0) {
+          damageMob(mobTarget, 4); // Punch damage
           player.attackCooldown = 0.28;
-          player.handActionSide = hostileTarget.x >= player.x ? 1 : -1;
+          player.handActionSide = mobTarget.x >= player.x ? 1 : -1;
           player.handActionTimer = HAND_ACTION_DURATION;
           return;
         }
