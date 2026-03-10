@@ -742,14 +742,21 @@
     }
 
     function shouldMobStepJump(mob) {
-      if (Math.abs(mob.vx) < 0.08) return false;
-      const dir = mob.vx > 0 ? 1 : -1;
-      const frontX = mob.x + dir * (mob.w / 2 + 0.08);
-      const gx = Math.floor(frontX);
+      const dir = (mob.direction || mob.facing || 0) >= 0 ? 1 : -1;
+      if (dir === 0) return false;
       const footY = mob.y - mob.h / 2;
-      const gyFoot = Math.floor(footY + 0.08);
-      const gyHead = gyFoot + 1; // one block above foot level
-      return isSolid(gx, gyFoot) && !isSolid(gx, gyHead);
+      const gyFoot = Math.floor(footY + 0.06);
+      const gyHead = gyFoot + 1;
+      const gyTop = gyFoot + 2;
+
+      const probeXNear = Math.floor(mob.x + dir * (mob.w / 2 + 0.08));
+      const probeXFar = Math.floor(mob.x + dir * (mob.w / 2 + 0.24));
+
+      // A 1-block obstacle ahead with enough headroom above it.
+      const nearBlocked = isSolid(probeXNear, gyFoot);
+      const farBlocked = isSolid(probeXFar, gyFoot);
+      const headroom = !isSolid(probeXNear, gyHead) && !isSolid(probeXNear, gyTop);
+      return (nearBlocked || farBlocked) && headroom;
     }
 
     function findHostileSpawnPosition(mode, hostileType) {
