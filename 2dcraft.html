@@ -295,7 +295,7 @@
         const caveDepth = 22 + Math.random() * 26; // 22-48 blocks below local surface
         const caveY = Math.max(3, Math.floor(heightMap[caveX] - caveDepth));
         const isBigCave = Math.random() < 0.1;
-        const baseR = isBigCave ? (10 + Math.random() * 10) : (2.6 + Math.random() * 3.2);
+        const baseR = isBigCave ? (8 + Math.random() * 8) : (1.2 + Math.random() * 1.8);
         const blobCount = isBigCave ? (5 + Math.floor(Math.random() * 5)) : (2 + Math.floor(Math.random() * 3));
 
         for (let b = 0; b < blobCount; b++) {
@@ -303,22 +303,22 @@
           const distance = Math.random() * baseR * (isBigCave ? 1.1 : 2.1);
           const cx = caveX + Math.cos(angle) * distance;
           const cy = caveY + Math.sin(angle) * distance * (isBigCave ? 0.7 : 0.45);
-          const rx = baseR * (isBigCave ? (0.6 + Math.random() * 0.5) : (0.52 + Math.random() * 0.35));
-          const ry = baseR * (isBigCave ? (0.45 + Math.random() * 0.4) : (0.28 + Math.random() * 0.25));
+          const rx = baseR * (isBigCave ? (0.55 + Math.random() * 0.45) : (0.32 + Math.random() * 0.2));
+          const ry = baseR * (isBigCave ? (0.4 + Math.random() * 0.35) : (0.14 + Math.random() * 0.12));
           carveBlob(cx, cy, rx, ry);
         }
 
         // Add winding tunnels; most are narrow, rare ones widen into caverns.
         let tx = caveX;
         let ty = caveY;
-        const tunnelSteps = isBigCave ? 24 : 30;
+        const tunnelSteps = isBigCave ? 24 : 36;
         for (let s = 0; s < tunnelSteps; s++) {
           tx += (Math.random() * 2.8 - 1.4);
           ty += (Math.random() * 1.4 - 0.7);
           if (isBigCave) {
             carveBlob(tx, ty, 3.6 + Math.random() * 2.0, 2.5 + Math.random() * 1.5);
           } else {
-            carveBlob(tx, ty, 1.5 + Math.random() * 1.1, 0.9 + Math.random() * 0.8);
+            carveBlob(tx, ty, 0.7 + Math.random() * 0.55, 0.32 + Math.random() * 0.34);
           }
         }
       }
