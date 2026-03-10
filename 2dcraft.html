@@ -304,7 +304,7 @@
           const cx = caveX + Math.cos(angle) * distance;
           const cy = caveY + Math.sin(angle) * distance * (isBigCave ? 0.7 : 0.45);
           const rx = baseR * (isBigCave ? (0.55 + Math.random() * 0.45) : (0.32 + Math.random() * 0.2));
-          const ry = baseR * (isBigCave ? (0.4 + Math.random() * 0.35) : (0.14 + Math.random() * 0.12));
+          const ry = 2.0 + Math.random() * 2.0; // 4-8 blocks tall caves
           carveBlob(cx, cy, rx, ry);
         }
 
@@ -318,9 +318,9 @@
           tx += Math.cos(tunnelAngle) * (isBigCave ? 1.7 : 2.0);
           ty += Math.sin(tunnelAngle) * (isBigCave ? 1.0 : 0.5);
           if (isBigCave) {
-            carveBlob(tx, ty, 3.6 + Math.random() * 2.0, 2.5 + Math.random() * 1.5);
+            carveBlob(tx, ty, 3.6 + Math.random() * 2.0, 2.0 + Math.random() * 2.0);
           } else {
-            carveBlob(tx, ty, 1.0 + Math.random() * 0.65, 0.5 + Math.random() * 0.4);
+            carveBlob(tx, ty, 1.0 + Math.random() * 0.65, 2.0 + Math.random() * 2.0);
           }
         }
       }
