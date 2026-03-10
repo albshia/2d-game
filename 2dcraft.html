@@ -1932,7 +1932,7 @@
         mob.walkCycle += dt * (6 + mob.speed * 2);
         mob.idleCycle += dt * 2.4;
         if (isMobGrounded(mob) && shouldMobStepJump(mob)) {
-          mob.vy = Math.max(mob.vy, 9.2);
+          mob.vy = Math.max(mob.vy, 7.0); // ~1 block max jump height
         }
         mob.vy += -25 * dt;
 
@@ -1957,11 +1957,11 @@
                 const dir = (mob.vx >= 0 ? 1 : -1);
                 if (!steppedUp && isMobGrounded(mob) && shouldMobStepJump(mob)) {
                   const stepX = mob.x + dir * 0.16;
-                  const stepY = mob.y + 1.02;
+                  const stepY = mob.y + 1.0;
                   if (canMobOccupyAt(mob, stepX, stepY)) {
                     mob.x = stepX;
                     mob.y = stepY;
-                    mob.vy = Math.max(mob.vy, 8.6);
+                    mob.vy = Math.max(mob.vy, 7.0);
                     steppedUp = true;
                     left = mob.x - mob.w/2; right = mob.x + mob.w/2; bottom = mob.y - mob.h/2; top = mob.y + mob.h/2;
                     continue;
@@ -1984,8 +1984,8 @@
           const probeX = Math.floor(mob.x + dir * (mob.w / 2 + 0.1));
           const footY = Math.floor(mob.y - mob.h / 2 + 0.08);
           if (isSolid(probeX, footY) && !isSolid(probeX, footY + 1)) {
-            mob.y += 1.02; // Direct 1-block step-up fallback when blocked.
-            mob.vy = Math.max(mob.vy, 9.4);
+            mob.y += 1.0; // Direct 1-block step-up fallback when blocked.
+            mob.vy = Math.max(mob.vy, 7.0);
             mob.vx = dir * Math.max(mob.speed * 0.6, 1.0);
           }
         }
