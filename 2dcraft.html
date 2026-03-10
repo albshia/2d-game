@@ -461,6 +461,7 @@
     let mobs = [];
     let hostileArrows = [];
     let hostileSpawnTimer = 0;
+    let passiveSpawnTimer = 0;
     const healthBarFill = document.getElementById('healthBarFill');
     const healthText = document.getElementById('healthText');
 
@@ -683,6 +684,26 @@
       mobs.push(mob);
     }
 
+    function spawnPassive(type, x, y) {
+      const mobType = MOB_TYPES[type];
+      mobs.push({
+        type,
+        x,
+        y,
+        vx: 0,
+        vy: 0,
+        w: mobType.w,
+        h: mobType.h,
+        speed: mobType.speed,
+        direction: Math.random() > 0.5 ? 1 : -1,
+        moveTimer: 0,
+        walkCycle: Math.random() * Math.PI * 2,
+        idleCycle: Math.random() * Math.PI * 2,
+        facing: Math.random() > 0.5 ? 1 : -1,
+        hurtTimer: 0
+      });
+    }
+
     function spawnHostile(type, x, y) {
       const mobType = HOSTILE_TYPES[type];
       mobs.push({
@@ -804,6 +825,24 @@
           }
         }
         if (Math.abs(x + 0.5 - player.x) < 5) continue;
+        if (canSpawnEntityAt(x + 0.5, y, w, h)) {
+          return { x: x + 0.5, y };
+        }
+      }
+      return null;
+    }
+
+    function findPassiveSpawnPosition(passiveType) {
+      const w = passiveType.w;
+      const h = passiveType.h;
+      for (let i = 0; i < 70; i++) {
+        const x = Math.max(2, Math.min(WIDTH - 3, Math.floor(player.x + (Math.random() - 0.5) * 90)));
+        const surface = getSurfaceHeightAt(x);
+        const groundY = surface - 1;
+        if (groundY < 1 || groundY >= HEIGHT) continue;
+        if (world[x][groundY] !== 'grass') continue;
+        const y = surface + h / 2 + 0.05;
+        if (Math.abs(x + 0.5 - player.x) < 6) continue;
         if (canSpawnEntityAt(x + 0.5, y, w, h)) {
           return { x: x + 0.5, y };
         }
@@ -1575,6 +1614,21 @@
       if (pos) spawnHostile(type, pos.x, pos.y);
     }
 
+    function autoSpawnPassives(dt) {
+      const passiveCount = mobs.filter(m => !m.hostile).length;
+      if (isNightTime()) return;
+      if (passiveCount >= 18) return;
+
+      passiveSpawnTimer -= dt;
+      if (passiveSpawnTimer > 0) return;
+      passiveSpawnTimer = 4.2 * (0.75 + Math.random() * 0.9);
+
+      const types = ['cow', 'sheep', 'pig'];
+      const type = types[Math.floor(Math.random() * types.length)];
+      const pos = findPassiveSpawnPosition(MOB_TYPES[type]);
+      if (pos) spawnPassive(type, pos.x, pos.y);
+    }
+
     function draw(){
       // Update time
       gameTime = (gameTime + timeSpeed) % 24000;
@@ -1901,6 +1955,7 @@
       }
 
       autoSpawnHostiles(dt);
+      autoSpawnPassives(dt);
 
       // Update mobs
       mobs.forEach((mob) => {
