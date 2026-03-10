@@ -280,8 +280,8 @@
             const d = nx * nx + ny * ny;
             if (d <= 1.0) {
               const depthFromSurface = heightMap[x] - y;
-              // Keep caves deeper below the surface while preserving roof blocks.
-              if (depthFromSurface >= 8 && y < heightMap[x] - 1) {
+              // Keep caves much deeper below the surface while preserving roof blocks.
+              if (depthFromSurface >= 16 && y < heightMap[x] - 1) {
                 world[x][y] = null;
               }
             }
@@ -292,7 +292,7 @@
       // Generate bigger caverns with irregular shapes.
       for (let i = 0; i < 14; i++) {
         const caveX = Math.floor(Math.random() * WIDTH);
-        const caveDepth = 8 + Math.random() * 6; // 8-14 blocks below local surface
+        const caveDepth = 22 + Math.random() * 26; // 22-48 blocks below local surface
         const caveY = Math.max(3, Math.floor(heightMap[caveX] - caveDepth));
         const baseR = 10 + Math.random() * 12; // big caves
         const blobCount = 4 + Math.floor(Math.random() * 5);
