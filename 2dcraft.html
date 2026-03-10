@@ -2139,9 +2139,9 @@
         }
         if (mobGrounded && !mobWasGrounded) {
           const impactSpeed = mob.maxFallSpeed || 0;
-          if (impactSpeed > 12 && mob.health != null) {
+          if (impactSpeed > 9 && mob.health != null) {
             mob.hurtTimer = 0.25;
-            const fallDamage = Math.max(1, Math.floor((impactSpeed - 12) / 2));
+            const fallDamage = Math.max(1, Math.floor((impactSpeed - 9) / 1.6));
             mob.health = Math.max(0, mob.health - fallDamage);
           }
           mob.maxFallSpeed = 0;
