@@ -437,7 +437,8 @@
       attackCooldown: 0,
       hurtTimer: 0,
       regenDelay: 0,
-      regenAccum: 0
+      regenAccum: 0,
+      maxFallSpeed: 0
     };
     let spawnPoint = { x: spawn.x, y: spawn.y };
     const PLAYER_COLLIDER_H = 1.9;
@@ -479,6 +480,7 @@
       player.invulnTimer = 1.0;
       player.regenDelay = 0;
       player.regenAccum = 0;
+      player.maxFallSpeed = 0;
       for (let i = 0; i < hotbarInventory.length; i++) hotbarInventory[i] = null;
       selected = 0;
       renderHotbar();
@@ -1828,6 +1830,11 @@
         if (keys.down) climbSpeed -= player.speed * 0.8; // Down
         player.vy += (climbSpeed - player.vy) * Math.min(15*dt, 1); // Smooth climbing
       }
+      const wasGrounded = player.grounded;
+      if (!wasGrounded && player.vy < 0) {
+        player.maxFallSpeed = Math.max(player.maxFallSpeed, -player.vy);
+      }
+
       // jump (if grounded)
       // Apply movement in sub-steps to avoid deep penetration at high fall speed.
       const moveX = player.vx * dt;
@@ -1840,7 +1847,20 @@
         player.y += moveY / moveSteps;
         if (resolveCollisions()) grounded = true;
       }
+      if (!grounded && player.vy < 0) {
+        player.maxFallSpeed = Math.max(player.maxFallSpeed, -player.vy);
+      }
       player.grounded = grounded;
+      if (grounded && !wasGrounded) {
+        const impactSpeed = player.maxFallSpeed;
+        if (impactSpeed > 12) {
+          const fallDamage = Math.max(1, Math.floor((impactSpeed - 12) / 2));
+          damagePlayer(fallDamage);
+        }
+        player.maxFallSpeed = 0;
+      } else if (grounded) {
+        player.maxFallSpeed = 0;
+      }
       if (grounded && keys.jump && !onLadder){ player.vy = 9.0; }
       if (Math.abs(player.vx) > 0.15 && grounded) {
         player.walkCycle += dt * 14;
