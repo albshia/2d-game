@@ -466,6 +466,7 @@
     };
     const HOSTILE_AGGRO_RADIUS = 15;
     const CREEPER_FUSE_TIME = 1.1;
+    const PLAYER_ATTACK_RANGE = 14;
     let mobs = [];
     let hostileArrows = [];
     let hostileSpawnTimer = 0;
@@ -975,7 +976,7 @@
           const wx = worldPx / tileSize;
           const wy = worldPy / tileSize;
           const inBounds = wx >= left && wx <= right && wy >= bottom && wy <= top;
-          const inReach = Math.abs(mob.x - player.x) <= 2.4 && Math.abs(mob.y - player.y) <= 2.6;
+          const inReach = Math.hypot(mob.x - player.x, mob.y - player.y) <= PLAYER_ATTACK_RANGE;
           if (inBounds && inReach) return mob;
         }
         return null;
