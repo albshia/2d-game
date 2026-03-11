@@ -157,6 +157,8 @@
       { id: 'door', color: '#654321' },
       { id: 'glass', color: '#e0f7fa' },
       { id: 'coal_ore', color: '#5a5a5a' },
+      { id: 'iron_ore', color: '#e0a86b' },
+      { id: 'gold_ore', color: '#d4af37' },
       { id: 'diamond_ore', color: '#42d4f4' },
       { id: 'coal', color: '#2f2f2f' },
       { id: 'diamond', color: '#7ee7ff' },
@@ -444,6 +446,8 @@
       }
 
       carveOreVeins('coal_ore', 8, 70, 220, 4, 10);
+      carveOreVeins('iron_ore', 16, 95, 170, 3, 8);
+      carveOreVeins('gold_ore', 38, 120, 100, 3, 7);
       carveOreVeins('diamond_ore', 60, 150, 60, 2, 5);
 
       // Post-processing: cover exposed dirt with grass and avoid exposed stone near surface.
@@ -1006,6 +1010,8 @@
       door: 0.65,
       glass: 0.15,
       coal_ore: 1.35,
+      iron_ore: 1.65,
+      gold_ore: 1.9,
       diamond_ore: 2.2
     };
     let miningState = { active: false, gx: 0, gy: 0, progress: 0, required: 0 };
