@@ -164,18 +164,54 @@
       { id: 'iron', color: '#c7c7c7' },
       { id: 'gold', color: '#ffd54f' },
       { id: 'diamond', color: '#7ee7ff' },
+      { id: 'iron_shovel', color: '#b5b5b5' },
+      { id: 'gold_shovel', color: '#ffd54f' },
+      { id: 'diamond_shovel', color: '#7ee7ff' },
+      { id: 'iron_sword', color: '#d0d0d0' },
+      { id: 'gold_sword', color: '#ffe082' },
+      { id: 'diamond_sword', color: '#9ef3ff' },
+      { id: 'iron_axe', color: '#b0b0b0' },
+      { id: 'gold_axe', color: '#ffd54f' },
+      { id: 'diamond_axe', color: '#7ee7ff' },
+      { id: 'iron_pickaxe', color: '#bdbdbd' },
+      { id: 'gold_pickaxe', color: '#ffd54f' },
+      { id: 'diamond_pickaxe', color: '#7ee7ff' },
+      { id: 'iron_boots', color: '#b0b0b0' },
+      { id: 'iron_leggings', color: '#b0b0b0' },
+      { id: 'iron_chestplate', color: '#b0b0b0' },
+      { id: 'iron_helmet', color: '#b0b0b0' },
+      { id: 'gold_boots', color: '#f4c542' },
+      { id: 'gold_leggings', color: '#f4c542' },
+      { id: 'gold_chestplate', color: '#f4c542' },
+      { id: 'gold_helmet', color: '#f4c542' },
+      { id: 'diamond_boots', color: '#77dce8' },
+      { id: 'diamond_leggings', color: '#77dce8' },
+      { id: 'diamond_chestplate', color: '#77dce8' },
+      { id: 'diamond_helmet', color: '#77dce8' },
     ];
     let selected = 0;
     const HOTBAR_SIZE = 10;
     const MAX_STACK = 64;
     const hotbarInventory = Array.from({length: HOTBAR_SIZE}, () => null);
     const BLOCK_BY_ID = Object.fromEntries(BLOCKS.map(b => [b.id, b]));
+    const MATERIAL_TIERS = ['iron', 'gold', 'diamond'];
+    const NON_PLACEABLE_ITEMS = new Set([
+      'coal', 'iron', 'gold', 'diamond',
+      'iron_shovel', 'gold_shovel', 'diamond_shovel',
+      'iron_sword', 'gold_sword', 'diamond_sword',
+      'iron_axe', 'gold_axe', 'diamond_axe',
+      'iron_pickaxe', 'gold_pickaxe', 'diamond_pickaxe',
+      'iron_boots', 'iron_leggings', 'iron_chestplate', 'iron_helmet',
+      'gold_boots', 'gold_leggings', 'gold_chestplate', 'gold_helmet',
+      'diamond_boots', 'diamond_leggings', 'diamond_chestplate', 'diamond_helmet'
+    ]);
+    const toolUnlockState = Object.fromEntries(MATERIAL_TIERS.map(t => [t, { shovel: false, sword: false, tier3: false, armor: false }]));
 
     const hotbarEl = document.getElementById('hotbar');
     function getItemLabel(id){
       const def = BLOCK_BY_ID[id];
       if (!def) return id;
-      return def.id.charAt(0).toUpperCase() + def.id.slice(1);
+      return def.id.split('_').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
     }
     function getDropItemId(blockId){
       if (blockId === 'coal_ore') return 'coal';
@@ -184,7 +220,52 @@
       if (blockId === 'diamond_ore') return 'diamond';
       return blockId;
     }
-    function addItemToInventory(id, amount = 1){
+    function getInventoryCount(id) {
+      let count = 0;
+      for (const slot of hotbarInventory) {
+        if (slot && slot.id === id) count += slot.count;
+      }
+      return count;
+    }
+
+    function hasInventoryItem(id) {
+      return getInventoryCount(id) > 0;
+    }
+
+    function resetToolUnlockState() {
+      for (const tier of MATERIAL_TIERS) {
+        toolUnlockState[tier] = { shovel: false, sword: false, tier3: false, armor: false };
+      }
+    }
+
+    function checkMaterialUnlocks() {
+      for (const tier of MATERIAL_TIERS) {
+        const amount = getInventoryCount(tier);
+        const state = toolUnlockState[tier];
+        if (!state.shovel && amount >= 1) {
+          addItemToInventory(`${tier}_shovel`, 1, true);
+          state.shovel = true;
+        }
+        if (!state.sword && amount >= 2) {
+          addItemToInventory(`${tier}_sword`, 1, true);
+          state.sword = true;
+        }
+        if (!state.tier3 && amount >= 3) {
+          addItemToInventory(`${tier}_axe`, 1, true);
+          addItemToInventory(`${tier}_pickaxe`, 1, true);
+          state.tier3 = true;
+        }
+        if (!state.armor && amount >= 4) {
+          addItemToInventory(`${tier}_boots`, 1, true);
+          addItemToInventory(`${tier}_leggings`, 1, true);
+          addItemToInventory(`${tier}_chestplate`, 1, true);
+          addItemToInventory(`${tier}_helmet`, 1, true);
+          state.armor = true;
+        }
+      }
+    }
+
+    function addItemToInventory(id, amount = 1, skipUnlock = false){
       if (!BLOCK_BY_ID[id]) return false;
       let remaining = amount;
       for (let i = 0; i < HOTBAR_SIZE && remaining > 0; i++) {
@@ -202,7 +283,10 @@
           remaining -= add;
         }
       }
-      if (remaining !== amount) renderHotbar();
+      if (remaining !== amount) {
+        if (!skipUnlock) checkMaterialUnlocks();
+        renderHotbar();
+      }
       return remaining === 0;
     }
     function consumeSelectedItem(amount = 1){
@@ -212,6 +296,10 @@
       if (slot.count <= 0) hotbarInventory[selected] = null;
       renderHotbar();
       return true;
+    }
+
+    function isPlaceableItem(id) {
+      return !NON_PLACEABLE_ITEMS.has(id);
     }
     function renderHotbar(){
       hotbarEl.innerHTML = '';
@@ -399,6 +487,44 @@
           }
         }
       }
+
+      // Add identical trees (logs + grass-leaf canopy).
+      for (let x = 4; x < WIDTH - 4; x += 5) {
+        if (Math.random() > 0.32) continue;
+        let groundY = -1;
+        for (let y = HEIGHT - 2; y >= 1; y--) {
+          if (world[x][y] === 'grass' && world[x][y + 1] === null) {
+            groundY = y;
+            break;
+          }
+        }
+        if (groundY < 0 || groundY + 7 >= HEIGHT) continue;
+
+        // Ensure clear trunk area.
+        let blocked = false;
+        for (let ty = groundY + 1; ty <= groundY + 4; ty++) {
+          if (world[x][ty] !== null) { blocked = true; break; }
+        }
+        if (blocked) continue;
+
+        // Trunk (identical every tree).
+        for (let ty = groundY + 1; ty <= groundY + 4; ty++) {
+          world[x][ty] = 'log';
+        }
+
+        // Fixed canopy made from grass blocks.
+        const canopy = [
+          [-2, 4], [-1, 4], [0, 4], [1, 4], [2, 4],
+          [-2, 5], [-1, 5], [0, 5], [1, 5], [2, 5],
+          [-1, 6], [0, 6], [1, 6]
+        ];
+        for (const [dx, dy] of canopy) {
+          const lx = x + dx;
+          const ly = groundY + dy;
+          if (lx < 0 || lx >= WIDTH || ly < 0 || ly >= HEIGHT) continue;
+          if (world[lx][ly] === null) world[lx][ly] = 'grass';
+        }
+      }
     }
 
     generateTerrain();
@@ -492,15 +618,34 @@
       player.regenAccum = 0;
       player.maxFallSpeed = 0;
       for (let i = 0; i < hotbarInventory.length; i++) hotbarInventory[i] = null;
+      resetToolUnlockState();
       selected = 0;
       renderHotbar();
       updateHealthUI();
     }
 
+    function getBestArmorReduction() {
+      const tiers = [
+        { id: 'diamond', reduction: 0.55 },
+        { id: 'iron', reduction: 0.4 },
+        { id: 'gold', reduction: 0.3 }
+      ];
+      for (const tier of tiers) {
+        const fullSet = hasInventoryItem(`${tier.id}_boots`)
+          && hasInventoryItem(`${tier.id}_leggings`)
+          && hasInventoryItem(`${tier.id}_chestplate`)
+          && hasInventoryItem(`${tier.id}_helmet`);
+        if (fullSet) return tier.reduction;
+      }
+      return 0;
+    }
+
     function damagePlayer(amount) {
       if (player.invulnTimer > 0) return;
+      const reduction = getBestArmorReduction();
+      const reducedAmount = Math.max(0.5, amount * (1 - reduction));
       player.hurtTimer = 0.25;
-      player.health = Math.max(0, player.health - amount);
+      player.health = Math.max(0, player.health - reducedAmount);
       player.invulnTimer = 0.45;
       player.regenDelay = 6.0; // Wait before regenerating again.
       player.regenAccum = 0;
@@ -904,6 +1049,40 @@
       miningState.required = 0;
     }
 
+    function getSelectedItemId() {
+      const slot = hotbarInventory[selected];
+      return slot ? slot.id : null;
+    }
+
+    function getPlayerAttackDamage() {
+      const id = getSelectedItemId();
+      if (id === 'diamond_sword') return 11;
+      if (id === 'iron_sword') return 9;
+      if (id === 'gold_sword') return 8;
+      return 4;
+    }
+
+    function getToolMiningMultiplier(blockId) {
+      const id = getSelectedItemId();
+      if (!id) return 1;
+      if ((blockId === 'grass' || blockId === 'dirt') && id.endsWith('_shovel')) {
+        if (id.startsWith('diamond_')) return 3.2;
+        if (id.startsWith('gold_')) return 2.8;
+        if (id.startsWith('iron_')) return 2.4;
+      }
+      if ((blockId === 'stone' || blockId.endsWith('_ore')) && id.endsWith('_pickaxe')) {
+        if (id.startsWith('diamond_')) return 3.3;
+        if (id.startsWith('gold_')) return 2.9;
+        if (id.startsWith('iron_')) return 2.5;
+      }
+      if (blockId === 'log' && id.endsWith('_axe')) {
+        if (id.startsWith('diamond_')) return 3.2;
+        if (id.startsWith('gold_')) return 2.8;
+        if (id.startsWith('iron_')) return 2.4;
+      }
+      return 1;
+    }
+
     function getMouseGridTarget() {
       const cam = getCameraOffset();
       const worldPx = mouse.x + cam.x;
@@ -999,7 +1178,7 @@
       if (e.button === 0 || mouseButtons.left) {
         const mobTarget = findMobAtPointer();
         if (mobTarget && player.attackCooldown <= 0) {
-          damageMob(mobTarget, 4); // Punch damage
+          damageMob(mobTarget, getPlayerAttackDamage());
           player.attackCooldown = 0.28;
           player.handActionSide = mobTarget.x >= player.x ? 1 : -1;
           player.handActionTimer = HAND_ACTION_DURATION;
@@ -1021,6 +1200,7 @@
           const selectedItem = hotbarInventory[selected];
           if (!selectedItem || selectedItem.count <= 0) return;
           const selectedBlock = selectedItem.id;
+          if (!isPlaceableItem(selectedBlock)) return;
           if (selectedBlock === 'door') {
             // Place 2-block tall door from lower block (clicked) upward
             if (gy >= 0 && gy < HEIGHT-1 && !world[gx][gy] && !world[gx][gy+1]) {
@@ -1889,7 +2069,8 @@
             miningState.progress = 0;
           }
           const blockId = world[gx][gy];
-          const required = BREAK_TIME[blockId] ?? 0.8;
+          const baseRequired = BREAK_TIME[blockId] ?? 0.8;
+          const required = baseRequired / getToolMiningMultiplier(blockId);
           miningState.required = required;
           if (Number.isFinite(required)) {
             miningState.progress += dt;
