@@ -466,7 +466,7 @@
     };
     const HOSTILE_AGGRO_RADIUS = 15;
     const CREEPER_FUSE_TIME = 1.1;
-    const PLAYER_ATTACK_RANGE = 14;
+    const INTERACTION_RANGE = 14;
     let mobs = [];
     let hostileArrows = [];
     let hostileSpawnTimer = 0;
@@ -913,6 +913,14 @@
       return { gx, gy, worldPx, worldPy };
     }
 
+    function isWithinInteractionRangeWorld(wx, wy) {
+      return Math.hypot(wx - player.x, wy - player.y) <= INTERACTION_RANGE;
+    }
+
+    function isWithinInteractionRangeTile(gx, gy) {
+      return isWithinInteractionRangeWorld(gx + 0.5, gy + 0.5);
+    }
+
     function breakBlockAt(gx, gy) {
       if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT) return false;
       const block = world[gx][gy];
@@ -976,7 +984,7 @@
           const wx = worldPx / tileSize;
           const wy = worldPy / tileSize;
           const inBounds = wx >= left && wx <= right && wy >= bottom && wy <= top;
-          const inReach = Math.hypot(mob.x - player.x, mob.y - player.y) <= PLAYER_ATTACK_RANGE;
+          const inReach = isWithinInteractionRangeWorld(mob.x, mob.y);
           if (inBounds && inReach) return mob;
         }
         return null;
@@ -1000,10 +1008,12 @@
       } else if (e.button === 1 || e.button === 2) {
         // Middle click or right click on door toggles it
         if (e.button === 1 && world[gx][gy] === 'door') {
+          if (!isWithinInteractionRangeTile(gx, gy)) return;
           const lowerY = getDoorLowerY(gx, gy);
           const key = `${gx},${lowerY}`;
           doorStates[key] = !doorStates[key];
         } else if (e.button === 2) {
+          if (!isWithinInteractionRangeTile(gx, gy)) return;
           // Right click to place blocks
           const left = player.x - player.w/2, right = player.x + player.w/2, bottom = player.y - PLAYER_COLLIDER_H/2, top = player.y + PLAYER_COLLIDER_H/2;
           if (gx+1 > left && gx < right && gy+1 > bottom && gy < top) return;
@@ -1869,7 +1879,7 @@
       // Timed block mining (hold left click).
       if (mouseButtons.left) {
         const { gx, gy } = getMouseGridTarget();
-        if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT || !world[gx][gy]) {
+        if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT || !world[gx][gy] || !isWithinInteractionRangeTile(gx, gy)) {
           resetMining();
         } else {
           if (!miningState.active || miningState.gx !== gx || miningState.gy !== gy) {
