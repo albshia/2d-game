@@ -157,33 +157,13 @@
       { id: 'door', color: '#654321' },
       { id: 'glass', color: '#e0f7fa' },
       { id: 'coal_ore', color: '#5a5a5a' },
-      { id: 'iron_ore', color: '#e0a86b' },
-      { id: 'gold_ore', color: '#d4af37' },
       { id: 'diamond_ore', color: '#42d4f4' },
       { id: 'coal', color: '#2f2f2f' },
-      { id: 'iron', color: '#c7c7c7' },
-      { id: 'gold', color: '#ffd54f' },
       { id: 'diamond', color: '#7ee7ff' },
-      { id: 'iron_shovel', color: '#b5b5b5' },
-      { id: 'gold_shovel', color: '#ffd54f' },
       { id: 'diamond_shovel', color: '#7ee7ff' },
-      { id: 'iron_sword', color: '#d0d0d0' },
-      { id: 'gold_sword', color: '#ffe082' },
       { id: 'diamond_sword', color: '#9ef3ff' },
-      { id: 'iron_axe', color: '#b0b0b0' },
-      { id: 'gold_axe', color: '#ffd54f' },
       { id: 'diamond_axe', color: '#7ee7ff' },
-      { id: 'iron_pickaxe', color: '#bdbdbd' },
-      { id: 'gold_pickaxe', color: '#ffd54f' },
       { id: 'diamond_pickaxe', color: '#7ee7ff' },
-      { id: 'iron_boots', color: '#b0b0b0' },
-      { id: 'iron_leggings', color: '#b0b0b0' },
-      { id: 'iron_chestplate', color: '#b0b0b0' },
-      { id: 'iron_helmet', color: '#b0b0b0' },
-      { id: 'gold_boots', color: '#f4c542' },
-      { id: 'gold_leggings', color: '#f4c542' },
-      { id: 'gold_chestplate', color: '#f4c542' },
-      { id: 'gold_helmet', color: '#f4c542' },
       { id: 'diamond_boots', color: '#77dce8' },
       { id: 'diamond_leggings', color: '#77dce8' },
       { id: 'diamond_chestplate', color: '#77dce8' },
@@ -194,15 +174,13 @@
     const MAX_STACK = 64;
     const hotbarInventory = Array.from({length: HOTBAR_SIZE}, () => null);
     const BLOCK_BY_ID = Object.fromEntries(BLOCKS.map(b => [b.id, b]));
-    const MATERIAL_TIERS = ['iron', 'gold', 'diamond'];
+    const MATERIAL_TIERS = ['diamond'];
     const NON_PLACEABLE_ITEMS = new Set([
-      'coal', 'iron', 'gold', 'diamond',
-      'iron_shovel', 'gold_shovel', 'diamond_shovel',
-      'iron_sword', 'gold_sword', 'diamond_sword',
-      'iron_axe', 'gold_axe', 'diamond_axe',
-      'iron_pickaxe', 'gold_pickaxe', 'diamond_pickaxe',
-      'iron_boots', 'iron_leggings', 'iron_chestplate', 'iron_helmet',
-      'gold_boots', 'gold_leggings', 'gold_chestplate', 'gold_helmet',
+      'coal', 'diamond',
+      'diamond_shovel',
+      'diamond_sword',
+      'diamond_axe',
+      'diamond_pickaxe',
       'diamond_boots', 'diamond_leggings', 'diamond_chestplate', 'diamond_helmet'
     ]);
     const toolUnlockState = Object.fromEntries(MATERIAL_TIERS.map(t => [t, { shovel: false, sword: false, tier3: false, armor: false }]));
@@ -215,8 +193,6 @@
     }
     function getDropItemId(blockId){
       if (blockId === 'coal_ore') return 'coal';
-      if (blockId === 'iron_ore') return 'iron';
-      if (blockId === 'gold_ore') return 'gold';
       if (blockId === 'diamond_ore') return 'diamond';
       return blockId;
     }
@@ -468,8 +444,6 @@
       }
 
       carveOreVeins('coal_ore', 8, 70, 220, 4, 10);
-      carveOreVeins('iron_ore', 16, 95, 170, 3, 8);
-      carveOreVeins('gold_ore', 38, 120, 100, 3, 7);
       carveOreVeins('diamond_ore', 60, 150, 60, 2, 5);
 
       // Post-processing: cover exposed dirt with grass and avoid exposed stone near surface.
@@ -565,6 +539,7 @@
       grounded: false,
       handActionTimer: 0,
       handActionSide: 1,
+      handToolId: null,
       maxHealth: 20,
       health: 20,
       invulnTimer: 0,
@@ -617,6 +592,7 @@
       player.regenDelay = 0;
       player.regenAccum = 0;
       player.maxFallSpeed = 0;
+      player.handToolId = null;
       for (let i = 0; i < hotbarInventory.length; i++) hotbarInventory[i] = null;
       resetToolUnlockState();
       selected = 0;
@@ -625,18 +601,11 @@
     }
 
     function getBestArmorReduction() {
-      const tiers = [
-        { id: 'diamond', reduction: 0.55 },
-        { id: 'iron', reduction: 0.4 },
-        { id: 'gold', reduction: 0.3 }
-      ];
-      for (const tier of tiers) {
-        const fullSet = hasInventoryItem(`${tier.id}_boots`)
-          && hasInventoryItem(`${tier.id}_leggings`)
-          && hasInventoryItem(`${tier.id}_chestplate`)
-          && hasInventoryItem(`${tier.id}_helmet`);
-        if (fullSet) return tier.reduction;
-      }
+      const fullSet = hasInventoryItem('diamond_boots')
+        && hasInventoryItem('diamond_leggings')
+        && hasInventoryItem('diamond_chestplate')
+        && hasInventoryItem('diamond_helmet');
+      if (fullSet) return 0.55;
       return 0;
     }
 
@@ -1037,8 +1006,6 @@
       door: 0.65,
       glass: 0.15,
       coal_ore: 1.35,
-      iron_ore: 1.65,
-      gold_ore: 1.9,
       diamond_ore: 2.2
     };
     let miningState = { active: false, gx: 0, gy: 0, progress: 0, required: 0 };
@@ -1057,8 +1024,6 @@
     function getPlayerAttackDamage() {
       const id = getSelectedItemId();
       if (id === 'diamond_sword') return 11;
-      if (id === 'iron_sword') return 9;
-      if (id === 'gold_sword') return 8;
       return 4;
     }
 
@@ -1066,21 +1031,24 @@
       const id = getSelectedItemId();
       if (!id) return 1;
       if ((blockId === 'grass' || blockId === 'dirt') && id.endsWith('_shovel')) {
-        if (id.startsWith('diamond_')) return 3.2;
-        if (id.startsWith('gold_')) return 2.8;
-        if (id.startsWith('iron_')) return 2.4;
+        if (id === 'diamond_shovel') return 3.2;
       }
       if ((blockId === 'stone' || blockId.endsWith('_ore')) && id.endsWith('_pickaxe')) {
-        if (id.startsWith('diamond_')) return 3.3;
-        if (id.startsWith('gold_')) return 2.9;
-        if (id.startsWith('iron_')) return 2.5;
+        if (id === 'diamond_pickaxe') return 3.3;
       }
       if (blockId === 'log' && id.endsWith('_axe')) {
-        if (id.startsWith('diamond_')) return 3.2;
-        if (id.startsWith('gold_')) return 2.8;
-        if (id.startsWith('iron_')) return 2.4;
+        if (id === 'diamond_axe') return 3.2;
       }
       return 1;
+    }
+
+    function getActionToolForBlock(blockId) {
+      const id = getSelectedItemId();
+      if (!id) return null;
+      if ((blockId === 'grass' || blockId === 'dirt') && id === 'diamond_shovel') return id;
+      if ((blockId === 'stone' || blockId.endsWith('_ore')) && id === 'diamond_pickaxe') return id;
+      if (blockId === 'log' && id === 'diamond_axe') return id;
+      return null;
     }
 
     function getMouseGridTarget() {
@@ -1104,6 +1072,7 @@
       if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT) return false;
       const block = world[gx][gy];
       if (!block) return false;
+      player.handToolId = getActionToolForBlock(block);
       if (block === 'door') {
         const lowerY = (gy > 0 && world[gx][gy - 1] === 'door') ? gy - 1 : gy;
         const key = `${gx},${lowerY}`;
@@ -1180,6 +1149,7 @@
         if (mobTarget && player.attackCooldown <= 0) {
           damageMob(mobTarget, getPlayerAttackDamage());
           player.attackCooldown = 0.28;
+          player.handToolId = getSelectedItemId() === 'diamond_sword' ? 'diamond_sword' : null;
           player.handActionSide = mobTarget.x >= player.x ? 1 : -1;
           player.handActionTimer = HAND_ACTION_DURATION;
           return;
@@ -1223,6 +1193,7 @@
       }
 
       if (acted) {
+        player.handToolId = null;
         player.handActionSide = (gx + 0.5) >= player.x ? 1 : -1;
         player.handActionTimer = HAND_ACTION_DURATION;
       }
@@ -1359,6 +1330,32 @@
       return grounded;
     }
 
+    function hasDiamondArmorSet() {
+      return hasInventoryItem('diamond_boots')
+        && hasInventoryItem('diamond_leggings')
+        && hasInventoryItem('diamond_chestplate')
+        && hasInventoryItem('diamond_helmet');
+    }
+
+    function drawHeldTool(toolId, handX, handY, pixel) {
+      if (!toolId || player.handActionTimer <= 0) return;
+      const toolColor = '#74d9e6';
+      const handleColor = '#5a3a24';
+      ctx.fillStyle = handleColor;
+      ctx.fillRect(handX - pixel * 0.25, handY + pixel * 0.2, pixel * 0.5, pixel * 3.2);
+      ctx.fillStyle = toolColor;
+      if (toolId === 'diamond_sword') {
+        ctx.fillRect(handX - pixel * 0.65, handY - pixel * 1.9, pixel * 1.3, pixel * 2.2);
+        ctx.fillRect(handX - pixel * 1.0, handY - pixel * 0.1, pixel * 2.0, pixel * 0.35);
+      } else if (toolId === 'diamond_pickaxe') {
+        ctx.fillRect(handX - pixel * 1.5, handY - pixel * 1.2, pixel * 3.0, pixel * 0.9);
+      } else if (toolId === 'diamond_axe') {
+        ctx.fillRect(handX - pixel * 0.2, handY - pixel * 1.5, pixel * 1.8, pixel * 1.4);
+      } else if (toolId === 'diamond_shovel') {
+        ctx.fillRect(handX - pixel * 0.8, handY - pixel * 1.3, pixel * 1.6, pixel * 1.2);
+      }
+    }
+
     function drawSteve(screenX, screenY, pixel, facing, walkCycle, moving) {
       const dir = facing >= 0 ? 1 : -1;
       const legSwing = moving ? Math.sin(walkCycle) * pixel * 0.9 : 0;
@@ -1413,6 +1410,19 @@
       ctx.fillRect(bodyX, bodyY + bodyH - 2 * pixel, bodyW, 2 * pixel);
       ctx.fillRect(bodyX, bodyY + bodyH + legSwing, limbW, limbH);
       ctx.fillRect(bodyX + bodyW - limbW, bodyY + bodyH - legSwing, limbW, limbH);
+
+      if (hasDiamondArmorSet()) {
+        ctx.fillStyle = '#6fdbe8';
+        ctx.fillRect(headX, headY, headW, 2 * pixel); // helmet
+        ctx.fillRect(bodyX, bodyY, bodyW, bodyH); // chestplate
+        ctx.fillStyle = '#58bfce';
+        ctx.fillRect(bodyX, bodyY + bodyH + legSwing, limbW, 7 * pixel); // leggings
+        ctx.fillRect(bodyX + bodyW - limbW, bodyY + bodyH - legSwing, limbW, 7 * pixel);
+        ctx.fillStyle = '#4aa8b5';
+        ctx.fillRect(bodyX, bodyY + bodyH + legSwing + 7 * pixel, limbW, 5 * pixel); // boots
+        ctx.fillRect(bodyX + bodyW - limbW, bodyY + bodyH - legSwing + 7 * pixel, limbW, 5 * pixel);
+      }
+      drawHeldTool(player.handToolId, bodyX + bodyW + limbW * 0.5, rightArmY + limbH * 0.5, pixel);
 
       // Outline
       ctx.strokeStyle = '#101010';
@@ -1480,6 +1490,19 @@
       ctx.fillRect(bodyX, bodyY + bodyH - 2 * pixel, bodyW, 2 * pixel);
       ctx.fillRect(bodyX, bodyY + bodyH + legSwing, legW, legH);
       ctx.fillRect(bodyX + bodyW - legW, bodyY + bodyH - legSwing, legW, legH);
+
+      if (hasDiamondArmorSet()) {
+        ctx.fillStyle = '#6fdbe8';
+        ctx.fillRect(headX, headY, headW, 2 * pixel); // helmet
+        ctx.fillRect(bodyX, bodyY, bodyW, bodyH); // chestplate
+        ctx.fillStyle = '#58bfce';
+        ctx.fillRect(bodyX, bodyY + bodyH + legSwing, legW, 7 * pixel); // leggings
+        ctx.fillRect(bodyX + bodyW - legW, bodyY + bodyH - legSwing, legW, 7 * pixel);
+        ctx.fillStyle = '#4aa8b5';
+        ctx.fillRect(bodyX, bodyY + bodyH + legSwing + 7 * pixel, legW, 5 * pixel); // boots
+        ctx.fillRect(bodyX + bodyW - legW, bodyY + bodyH - legSwing + 7 * pixel, legW, 5 * pixel);
+      }
+      drawHeldTool(player.handToolId, bodyX + bodyW + armW * 0.5, rightArmY + armH * 0.5, pixel);
 
       // Outline
       ctx.strokeStyle = '#101010';
@@ -2023,6 +2046,7 @@
       // input
       if (player.handActionTimer > 0) {
         player.handActionTimer = Math.max(0, player.handActionTimer - dt);
+        if (player.handActionTimer <= 0) player.handToolId = null;
       }
       if (player.attackCooldown > 0) {
         player.attackCooldown = Math.max(0, player.attackCooldown - dt);
