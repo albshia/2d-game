@@ -21,7 +21,7 @@
         const key = `${gx},${lowerY}`;
         return !doorStates[key]; // Solid only if door is closed
       }
-      return block && block !== 'water' && block !== 'ladder'; // Water and ladder are not solid
+      return block && block !== 'water' && block !== 'lava' && block !== 'ladder'; // Liquids and ladders are not solid
     }
 
     function hasOpenSkyAt(gx, gy){

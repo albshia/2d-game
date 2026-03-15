@@ -154,6 +154,41 @@
       carveOreVeins('gold_ore', 38, 120, 100, 3, 7);
       carveOreVeins('diamond_ore', 60, 150, 60, 2, 5);
 
+      function generateLavaPools() {
+        const poolCount = 18 + Math.floor(Math.random() * 10);
+        for (let i = 0; i < poolCount; i++) {
+          const cx = 6 + Math.floor(Math.random() * (WIDTH - 12));
+          const depth = 72 + Math.random() * 72;
+          const cy = Math.max(4, Math.floor(heightMap[cx] - depth));
+          const rx = 2 + Math.random() * 2.5;
+          const ry = 1.3 + Math.random() * 1.3;
+          const minX = Math.max(1, Math.floor(cx - rx - 1));
+          const maxX = Math.min(WIDTH - 2, Math.ceil(cx + rx + 1));
+          const minY = Math.max(1, Math.floor(cy - ry - 1));
+          const maxY = Math.min(HEIGHT - 2, Math.ceil(cy + ry + 1));
+
+          let openTiles = 0;
+          for (let x = minX; x <= maxX; x++) {
+            for (let y = minY; y <= maxY; y++) {
+              if (world[x][y] === null && heightMap[x] - y >= 55) openTiles++;
+            }
+          }
+          if (openTiles < 8) continue;
+
+          for (let x = minX; x <= maxX; x++) {
+            for (let y = minY; y <= maxY; y++) {
+              const nx = (x - cx) / rx;
+              const ny = (y - cy) / ry;
+              if (nx * nx + ny * ny > 1) continue;
+              if (heightMap[x] - y < 55) continue;
+              if (world[x][y] === null) world[x][y] = 'lava';
+            }
+          }
+        }
+      }
+
+      generateLavaPools();
+
       // Post-processing: cover exposed dirt with grass and avoid exposed stone near surface.
       for (let x = 0; x < WIDTH; x++) {
         for (let y = 0; y < HEIGHT; y++) {

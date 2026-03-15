@@ -9,6 +9,7 @@
       stone: 1.25,
       log: 0.9,
       water: Infinity,
+      lava: Infinity,
       planks: 0.7,
       bricks: 1.7,
       ladder: 0.25,

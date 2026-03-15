@@ -8,6 +8,7 @@
       { id: 'stone', color: '#9e9e9e' },
       { id: 'log',  color: '#8B4513' },
       { id: 'water', color: '#2196f3' },
+      { id: 'lava', color: '#ff6a1a' },
       { id: 'planks', color: '#d2b48c' },
       { id: 'bricks', color: '#b71c1c' },
       { id: 'ladder', color: '#a0522d' },
