@@ -92,6 +92,7 @@
 
     function getHarvestDropItemId(blockId) {
       const pickaxeTier = getPickaxeHarvestTier();
+      if (blockId === 'stone') return pickaxeTier >= 1 ? 'stone' : null;
       if (blockId === 'coal_ore') return pickaxeTier >= 1 ? 'coal' : null;
       if (blockId === 'iron_ore') return pickaxeTier >= 3 ? 'iron_ore' : null;
       if (blockId === 'gold_ore') return pickaxeTier >= 4 ? 'gold_ore' : null;
