@@ -115,7 +115,18 @@
         player.grounded = grounded;
         if (grounded && !wasGrounded) {
           const impactSpeed = player.maxFallSpeed;
-          if (impactSpeed > 12) {
+          const feetLeft = Math.floor(player.x - player.w / 2 + 0.05);
+          const feetRight = Math.floor(player.x + player.w / 2 - 0.05);
+          const feetY = Math.floor(player.y - PLAYER_COLLIDER_H / 2 + 0.05);
+          let landedInWater = false;
+          for (let x = feetLeft; x <= feetRight; x++) {
+            if (x < 0 || x >= WIDTH || feetY < 0 || feetY >= HEIGHT) continue;
+            if (world[x][feetY] === 'water') {
+              landedInWater = true;
+              break;
+            }
+          }
+          if (impactSpeed > 12 && !landedInWater) {
             const fallDamage = Math.max(1, Math.floor((impactSpeed - 12) / 2));
             damagePlayer(fallDamage);
           }
