@@ -196,11 +196,6 @@
           const key = `${gx},${lowerY}`;
           doorStates[key] = !doorStates[key];
         } else if (e.button === 2) {
-          if (!isWithinInteractionRangeTile(gx, gy)) return;
-          // Right click to place blocks
-          const left = player.x - player.w/2, right = player.x + player.w/2, bottom = player.y - PLAYER_COLLIDER_H/2, top = player.y + PLAYER_COLLIDER_H/2;
-          if (gx+1 > left && gx < right && gy+1 > bottom && gy < top) return;
-
           const selectedItem = hotbarInventory[selected];
           if (!selectedItem || selectedItem.count <= 0) return;
           const selectedBlock = selectedItem.id;
@@ -232,6 +227,10 @@
             }
             return;
           }
+          if (!isWithinInteractionRangeTile(gx, gy)) return;
+          // Right click to place blocks
+          const left = player.x - player.w/2, right = player.x + player.w/2, bottom = player.y - PLAYER_COLLIDER_H/2, top = player.y + PLAYER_COLLIDER_H/2;
+          if (gx+1 > left && gx < right && gy+1 > bottom && gy < top) return;
           if (!isPlaceableItem(selectedBlock)) return;
           if (selectedBlock === 'door') {
             // Place 2-block tall door from lower block (clicked) upward
