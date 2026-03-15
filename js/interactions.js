@@ -155,6 +155,31 @@
     function handleBlockAction(e) {
       if (deathSequence.active) return;
       const { gx, gy, worldPx, worldPy } = getMouseGridTarget();
+      if (e.button === 2) {
+        const selectedItem = hotbarInventory[selected];
+        const selectedBlock = selectedItem?.id;
+        if (selectedBlock === 'meat') {
+          if (player.health >= player.maxHealth) return;
+          player.health = Math.min(player.maxHealth, player.health + (1 + Math.floor(Math.random() * 2)));
+          player.regenDelay = 0;
+          player.regenAccum = 0;
+          updateHealthUI();
+          consumeSelectedItem(1);
+          return;
+        }
+        if (selectedBlock === 'coal') {
+          if (getInventoryCount('iron_ore') > 0) {
+            if (consumeSelectedItem(1) && consumeInventoryItemById('iron_ore', 1)) {
+              registerMaterialAcquired('iron', 1);
+            }
+          } else if (getInventoryCount('gold_ore') > 0) {
+            if (consumeSelectedItem(1) && consumeInventoryItemById('gold_ore', 1)) {
+              registerMaterialAcquired('gold', 1);
+            }
+          }
+          return;
+        }
+      }
       if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT) return;
       let acted = false;
 
@@ -199,34 +224,6 @@
           const selectedItem = hotbarInventory[selected];
           if (!selectedItem || selectedItem.count <= 0) return;
           const selectedBlock = selectedItem.id;
-          if (selectedBlock === 'meat') {
-            if (player.health >= player.maxHealth) return;
-            player.health = Math.min(player.maxHealth, player.health + (1 + Math.floor(Math.random() * 2)));
-            player.regenDelay = 0;
-            player.regenAccum = 0;
-            updateHealthUI();
-            consumeSelectedItem(1);
-            acted = true;
-            return;
-          }
-          if (selectedBlock === 'coal') {
-            let smelted = false;
-            if (getInventoryCount('iron_ore') > 0) {
-              if (consumeSelectedItem(1) && consumeInventoryItemById('iron_ore', 1)) {
-                registerMaterialAcquired('iron', 1);
-                smelted = true;
-              }
-            } else if (getInventoryCount('gold_ore') > 0) {
-              if (consumeSelectedItem(1) && consumeInventoryItemById('gold_ore', 1)) {
-                registerMaterialAcquired('gold', 1);
-                smelted = true;
-              }
-            }
-            if (smelted) {
-              acted = true;
-            }
-            return;
-          }
           if (!isWithinInteractionRangeTile(gx, gy)) return;
           // Right click to place blocks
           const left = player.x - player.w/2, right = player.x + player.w/2, bottom = player.y - PLAYER_COLLIDER_H/2, top = player.y + PLAYER_COLLIDER_H/2;
