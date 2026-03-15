@@ -174,7 +174,7 @@
 
     function setInventorySlotValue(kind, index, value) {
       const ref = findInventorySlotRef(kind, index);
-      ref.slots[index] = value;
+      ref.slots[index] = value && value.count > 0 ? value : null;
     }
 
     function clearDraggedInventoryItem() {
@@ -581,7 +581,7 @@
         num.textContent = label;
         slot.appendChild(num);
       }
-        if (item) {
+        if (item && item.count > 0) {
           const swatch = createHotbarIconElement(item.id);
           const name = document.createElement('div'); name.className='block-name'; name.textContent = getItemLabel(item.id);
           const count = document.createElement('div'); count.className='count'; count.textContent = String(item.count);
