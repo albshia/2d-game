@@ -77,11 +77,25 @@
         resetMining();
       }
       if (!deathSequence.active && !inventoryOpen) {
+        const bodyLeft = Math.floor(player.x - player.w / 2 + 0.05);
+        const bodyRight = Math.floor(player.x + player.w / 2 - 0.05);
+        const bodyBottom = Math.floor(player.y - PLAYER_COLLIDER_H / 2 + 0.05);
+        const bodyTop = Math.floor(player.y + PLAYER_COLLIDER_H / 2 - 0.05);
+        let inWater = false;
+        for (let x = bodyLeft; x <= bodyRight && !inWater; x++) {
+          for (let y = bodyBottom; y <= bodyTop; y++) {
+            if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) continue;
+            if (world[x][y] === 'water') {
+              inWater = true;
+              break;
+            }
+          }
+        }
         let ax = 0;
         if (keys.left) ax -= 1; if (keys.right) ax += 1;
-        const targetVx = ax * player.speed;
+        const targetVx = ax * player.speed * (inWater ? 0.4 : 1);
         // simple accel
-        player.vx += (targetVx - player.vx) * Math.min(10*dt, 1);
+        player.vx += (targetVx - player.vx) * Math.min((inWater ? 5 : 10)*dt, 1);
         if (Math.abs(player.vx) > 0.1) player.facing = player.vx > 0 ? 1 : -1;
         // gravity
         const onLadder = isOnLadder();
