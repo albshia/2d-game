@@ -4,7 +4,7 @@
       if (deathSequence.active) {
         deathSequence.timer = Math.max(0, deathSequence.timer - dt);
         const progress = 1 - (deathSequence.timer / deathSequence.duration);
-        const eased = 1 - Math.pow(1 - progress, 3);
+        const eased = 0.5 - 0.5 * Math.cos(progress * Math.PI);
         cameraZoom = deathSequence.zoomStart + (deathSequence.zoomTarget - deathSequence.zoomStart) * eased;
         updateTileSize();
       }
