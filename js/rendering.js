@@ -757,10 +757,17 @@
       const startY = Math.floor(cam.y / tileSize) - 1;
       const endY = Math.ceil((cam.y + canvas.height) / tileSize) + 1;
 
+      function getTileBrightness(gx, gy) {
+        if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT) return brightness;
+        if (!hasOpenSkyAt(gx, gy)) return 0.16;
+        return brightness;
+      }
+
       for (let gx = startX; gx <= endX; gx++){
         for (let gy = startY; gy <= endY; gy++){
           const sx = gx * tileSize - cam.x;
           const sy = canvas.height - ((gy+1) * tileSize - cam.y);
+          const tileBrightness = getTileBrightness(gx, gy);
           if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT){
             // Sky with time-based color
             let skyColor = '#87CEEB'; // Day sky
@@ -774,16 +781,20 @@
             const block = BLOCKS.find(b=>b.id===t);
             ctx.fillStyle = block.color;
             // Apply brightness to blocks
-            if (brightness < 1) {
+            if (tileBrightness < 1) {
               const rgb = hexToRgb(block.color);
-              ctx.fillStyle = `rgb(${Math.floor(rgb.r * brightness)}, ${Math.floor(rgb.g * brightness)}, ${Math.floor(rgb.b * brightness)})`;
+              ctx.fillStyle = `rgb(${Math.floor(rgb.r * tileBrightness)}, ${Math.floor(rgb.g * tileBrightness)}, ${Math.floor(rgb.b * tileBrightness)})`;
             }
             ctx.fillRect(sx, sy, tileSize, tileSize);
           } else {
-            // Render void/air blocks with sky color
-            let skyColor = '#87CEEB'; // Day sky
-            if (brightness < 0.5) skyColor = '#191970'; // Night sky
-            ctx.fillStyle = skyColor;
+            // Render enclosed caves as permanently dark air.
+            if (tileBrightness <= 0.2) {
+              ctx.fillStyle = '#06080d';
+            } else {
+              let skyColor = '#87CEEB'; // Day sky
+              if (tileBrightness < 0.5) skyColor = '#191970'; // Night sky
+              ctx.fillStyle = skyColor;
+            }
             ctx.fillRect(sx, sy, tileSize, tileSize);
           }
           ctx.strokeStyle = 'rgba(0,0,0,0.06)'; ctx.strokeRect(sx+0.5, sy+0.5, tileSize-1, tileSize-1);
