@@ -140,8 +140,8 @@
     }
     function getDropItemId(blockId){
       if (blockId === 'coal_ore') return 'coal';
-      if (blockId === 'iron_ore') return null;
-      if (blockId === 'gold_ore') return null;
+      if (blockId === 'iron_ore') return 'iron_ore';
+      if (blockId === 'gold_ore') return 'gold_ore';
       if (blockId === 'diamond_ore') return null;
       return blockId;
     }

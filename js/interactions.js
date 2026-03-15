@@ -110,8 +110,6 @@
         if (lowerY + 1 < HEIGHT && world[gx][lowerY + 1] === 'door') world[gx][lowerY + 1] = null;
         addItemToInventory('door', 1);
       } else {
-        if (block === 'iron_ore') registerMaterialAcquired('iron');
-        if (block === 'gold_ore') registerMaterialAcquired('gold');
         if (block === 'diamond_ore') registerMaterialAcquired('diamond');
         const dropItemId = getDropItemId(block);
         if (dropItemId) addItemToInventory(dropItemId, 1);
