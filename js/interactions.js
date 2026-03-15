@@ -80,6 +80,25 @@
       return null;
     }
 
+    function getPickaxeHarvestTier() {
+      const id = getSelectedItemId();
+      if (id === 'wood_pickaxe') return 1;
+      if (id === 'gold_pickaxe') return 2;
+      if (id === 'stone_pickaxe') return 3;
+      if (id === 'iron_pickaxe') return 4;
+      if (id === 'diamond_pickaxe') return 5;
+      return 0;
+    }
+
+    function getHarvestDropItemId(blockId) {
+      const pickaxeTier = getPickaxeHarvestTier();
+      if (blockId === 'coal_ore') return pickaxeTier >= 1 ? 'coal' : null;
+      if (blockId === 'iron_ore') return pickaxeTier >= 3 ? 'iron_ore' : null;
+      if (blockId === 'gold_ore') return pickaxeTier >= 4 ? 'gold_ore' : null;
+      if (blockId === 'diamond_ore') return pickaxeTier >= 4 ? 'diamond' : null;
+      return getDropItemId(blockId);
+    }
+
     function getMouseGridTarget() {
       const cam = getCameraOffset();
       const worldPx = mouse.x + cam.x;
@@ -110,10 +129,9 @@
         if (lowerY + 1 < HEIGHT && world[gx][lowerY + 1] === 'door') world[gx][lowerY + 1] = null;
         addItemToInventory('door', 1);
       } else {
-        if (block === 'iron_ore') registerMaterialAcquired('iron');
-        if (block === 'gold_ore') registerMaterialAcquired('gold');
-        if (block === 'diamond_ore') registerMaterialAcquired('diamond');
-        const dropItemId = getDropItemId(block);
+        const dropItemId = getHarvestDropItemId(block);
+        if (dropItemId === 'iron_ore') registerMaterialAcquired('iron');
+        if (dropItemId === 'gold_ore') registerMaterialAcquired('gold');
         if (dropItemId) addItemToInventory(dropItemId, 1);
         world[gx][gy] = null;
       }
