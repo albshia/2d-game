@@ -31,7 +31,7 @@
         player.regenDelay = Math.max(0, player.regenDelay - dt);
       } else if (player.health > 0 && player.health < player.maxHealth) {
         player.regenAccum += dt;
-        if (player.regenAccum >= 2.0) {
+        if (player.regenAccum >= 3.5) {
           player.regenAccum = 0;
           player.health = Math.min(player.maxHealth, player.health + 1);
           updateHealthUI();
