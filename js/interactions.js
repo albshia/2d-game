@@ -320,6 +320,14 @@
       handleBlockAction(e);
     });
 
+    canvas.addEventListener('wheel', e => {
+      if (inventoryOpen) return;
+      e.preventDefault();
+      if (e.deltaY > 0) selected = (selected + 1) % HOTBAR_SIZE;
+      else if (e.deltaY < 0) selected = (selected - 1 + HOTBAR_SIZE) % HOTBAR_SIZE;
+      renderInventoryUI();
+    }, { passive: false });
+
     canvas.addEventListener('mouseup', e => {
       if (inventoryOpen) return;
       if (e.button === 0) mouseButtons.left = false;
