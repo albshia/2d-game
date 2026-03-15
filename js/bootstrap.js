@@ -579,6 +579,11 @@
 
     renderInventoryUI();
     window.addEventListener('keydown', (e)=>{
+      if (e.code === 'Escape' && inventoryOpen) {
+        e.preventDefault();
+        toggleInventory(false);
+        return;
+      }
       if (e.code === 'KeyE') {
         e.preventDefault();
         toggleInventory();
