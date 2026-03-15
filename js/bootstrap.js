@@ -146,6 +146,8 @@
     let inventoryOpen = false;
     let draggedInventoryItem = null;
     let draggedInventorySource = null;
+    let inventoryRightDragActive = false;
+    let inventoryRightDragVisited = new Set();
     const CRAFTING_RECIPES = [
       { pattern: [['log']], output: { id: 'planks', count: 4 } },
       { pattern: [['planks', 'planks'], ['planks', 'planks'], ['planks', 'planks']], output: { id: 'door', count: 1 } },
@@ -178,6 +180,8 @@
     function clearDraggedInventoryItem() {
       draggedInventoryItem = null;
       draggedInventorySource = null;
+      inventoryRightDragActive = false;
+      inventoryRightDragVisited.clear();
       draggedInventoryItemEl.innerHTML = '';
       draggedInventoryItemEl.style.transform = 'translate(-9999px, -9999px)';
     }
@@ -185,6 +189,24 @@
     function updateDraggedInventoryItemPosition(clientX, clientY) {
       if (!draggedInventoryItem) return;
       draggedInventoryItemEl.style.transform = `translate(${clientX - 26}px, ${clientY - 26}px)`;
+    }
+
+    function getInventorySlotKey(kind, index) {
+      return `${kind}:${index}`;
+    }
+
+    function distributeOneDraggedItemToSlot(kind, index) {
+      if (!draggedInventoryItem || draggedInventoryItem.count <= 0) return false;
+      const slotItem = getInventorySlotValue(kind, index);
+      if (!slotItem) {
+        setInventorySlotValue(kind, index, { id: draggedInventoryItem.id, count: 1 });
+      } else {
+        if (slotItem.id !== draggedInventoryItem.id || slotItem.count >= MAX_STACK) return false;
+        slotItem.count += 1;
+      }
+      draggedInventoryItem.count -= 1;
+      if (draggedInventoryItem.count <= 0) clearDraggedInventoryItem();
+      return true;
     }
 
     function getTrimmedCraftPattern() {
@@ -552,8 +574,8 @@
       if (interactive) {
         slot.addEventListener('mousedown', (e) => {
           e.preventDefault();
-          if (e.button !== 0) return;
           if (craftResult) {
+            if (e.button !== 0) return;
             const resultItem = getCraftingResult();
             if (!resultItem) return;
             if (draggedInventoryItem && draggedInventoryItem.id !== resultItem.id) return;
@@ -569,6 +591,24 @@
             updateDraggedInventoryItemPosition(e.clientX, e.clientY);
             return;
           }
+          if (e.button === 2) {
+            const slotItem = getInventorySlotValue(kind, index);
+            if (!draggedInventoryItem) {
+              if (!slotItem) return;
+              draggedInventoryItem = slotItem;
+              draggedInventorySource = { kind, index };
+              setInventorySlotValue(kind, index, null);
+            }
+            inventoryRightDragActive = true;
+            inventoryRightDragVisited = new Set([getInventorySlotKey(kind, index)]);
+            if (!(draggedInventorySource && draggedInventorySource.kind === kind && draggedInventorySource.index === index)) {
+              distributeOneDraggedItemToSlot(kind, index);
+            }
+            renderInventoryUI();
+            updateDraggedInventoryItemPosition(e.clientX, e.clientY);
+            return;
+          }
+          if (e.button !== 0) return;
           const slotItem = getInventorySlotValue(kind, index);
           if (!draggedInventoryItem && !slotItem) return;
           if (!draggedInventoryItem) {
@@ -590,6 +630,16 @@
           }
           renderInventoryUI();
           updateDraggedInventoryItemPosition(e.clientX, e.clientY);
+        });
+        slot.addEventListener('mouseenter', (e) => {
+          if (!inventoryRightDragActive) return;
+          const slotKey = getInventorySlotKey(kind, index);
+          if (inventoryRightDragVisited.has(slotKey)) return;
+          inventoryRightDragVisited.add(slotKey);
+          if (distributeOneDraggedItemToSlot(kind, index)) {
+            renderInventoryUI();
+            updateDraggedInventoryItemPosition(e.clientX, e.clientY);
+          }
         });
       }
       return slot;
@@ -679,7 +729,14 @@
         renderInventoryUI();
       }
     });
+    inventoryOverlayEl.addEventListener('contextmenu', (e) => e.preventDefault());
     window.addEventListener('mousemove', (e) => updateDraggedInventoryItemPosition(e.clientX, e.clientY));
+    window.addEventListener('mouseup', (e) => {
+      if (e.button === 2) {
+        inventoryRightDragActive = false;
+        inventoryRightDragVisited.clear();
+      }
+    });
 
     renderInventoryUI();
     window.addEventListener('keydown', (e)=>{
