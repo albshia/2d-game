@@ -756,20 +756,22 @@
       const endX = Math.ceil((cam.x + canvas.width) / tileSize) + 1;
       const startY = Math.floor(cam.y / tileSize) - 1;
       const endY = Math.ceil((cam.y + canvas.height) / tileSize) + 1;
-      const caveDarknessCeilingY = Math.floor(HEIGHT * 0.42);
+      function isAirBlock(gx, gy) {
+        if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT) return true;
+        return !world[gx][gy];
+      }
 
-      function getTileBrightness(gx, gy) {
-        if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT) return brightness;
-        if (hasOpenSkyAt(gx, gy)) return 1;
-        if (gy <= caveDarknessCeilingY && !hasOpenSkyAt(gx, gy)) return 0.16;
-        return brightness;
+      function blockTouchesAir(gx, gy) {
+        return isAirBlock(gx - 1, gy)
+          || isAirBlock(gx + 1, gy)
+          || isAirBlock(gx, gy - 1)
+          || isAirBlock(gx, gy + 1);
       }
 
       for (let gx = startX; gx <= endX; gx++){
         for (let gy = startY; gy <= endY; gy++){
           const sx = gx * tileSize - cam.x;
           const sy = canvas.height - ((gy+1) * tileSize - cam.y);
-          const tileBrightness = getTileBrightness(gx, gy);
           if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT){
             // Sky with time-based color
             let skyColor = '#87CEEB'; // Day sky
@@ -781,23 +783,17 @@
           const t = world[gx][gy];
           if (t){
             const block = BLOCKS.find(b=>b.id===t);
-            const blockExposed = hasOpenSkyAt(gx, gy);
+            const blockBrightness = blockTouchesAir(gx, gy) ? 1 : 0.16;
             ctx.fillStyle = block.color;
-            // Exposed blocks stay fully bright; only enclosed blocks are dimmed.
-            if (!blockExposed && tileBrightness < 1) {
+            if (blockBrightness < 1) {
               const rgb = hexToRgb(block.color);
-              ctx.fillStyle = `rgb(${Math.floor(rgb.r * tileBrightness)}, ${Math.floor(rgb.g * tileBrightness)}, ${Math.floor(rgb.b * tileBrightness)})`;
+              ctx.fillStyle = `rgb(${Math.floor(rgb.r * blockBrightness)}, ${Math.floor(rgb.g * blockBrightness)}, ${Math.floor(rgb.b * blockBrightness)})`;
             }
             ctx.fillRect(sx, sy, tileSize, tileSize);
           } else {
-            // Render enclosed caves as permanently dark air.
-            if (tileBrightness <= 0.2) {
-              ctx.fillStyle = '#06080d';
-            } else {
-              let skyColor = '#87CEEB'; // Day sky
-              if (tileBrightness < 0.5) skyColor = '#191970'; // Night sky
-              ctx.fillStyle = skyColor;
-            }
+            let skyColor = '#87CEEB'; // Day sky
+            if (brightness < 0.5) skyColor = '#191970'; // Night sky
+            ctx.fillStyle = skyColor;
             ctx.fillRect(sx, sy, tileSize, tileSize);
           }
           ctx.strokeStyle = 'rgba(0,0,0,0.06)'; ctx.strokeRect(sx+0.5, sy+0.5, tileSize-1, tileSize-1);
