@@ -47,9 +47,11 @@
     let selected = 0;
     const HOTBAR_SIZE = 10;
     const STORAGE_SIZE = 30;
+    const CRAFT_GRID_SIZE = 9;
     const MAX_STACK = 64;
     const hotbarInventory = Array.from({length: HOTBAR_SIZE}, () => null);
     const storageInventory = Array.from({length: STORAGE_SIZE}, () => null);
+    const craftingInventory = Array.from({length: CRAFT_GRID_SIZE}, () => null);
     const BLOCK_BY_ID = Object.fromEntries(BLOCKS.map(b => [b.id, b]));
     const MATERIAL_TIERS = [
       {
@@ -138,17 +140,28 @@
     const inventoryOverlayEl = document.getElementById('inventoryOverlay');
     const inventoryStorageEl = document.getElementById('inventoryStorage');
     const inventoryHotbarEl = document.getElementById('inventoryHotbar');
+    const craftingGridEl = document.getElementById('craftingGrid');
+    const craftingResultEl = document.getElementById('craftingResult');
     const draggedInventoryItemEl = document.getElementById('draggedInventoryItem');
     let inventoryOpen = false;
     let draggedInventoryItem = null;
     let draggedInventorySource = null;
+    const CRAFTING_RECIPES = [
+      { pattern: [['log']], output: { id: 'planks', count: 4 } },
+      { pattern: [['planks', 'planks'], ['planks', 'planks'], ['planks', 'planks']], output: { id: 'door', count: 1 } },
+      { pattern: [['planks'], ['planks'], ['planks']], output: { id: 'ladder', count: 3 } }
+    ];
 
     function getAllInventoryContainers() {
       return [hotbarInventory, storageInventory];
     }
 
     function findInventorySlotRef(kind, index) {
-      const slots = kind === 'storage' ? storageInventory : hotbarInventory;
+      const slots = kind === 'storage'
+        ? storageInventory
+        : kind === 'crafting'
+          ? craftingInventory
+          : hotbarInventory;
       return { slots, kind, index };
     }
 
@@ -172,6 +185,60 @@
     function updateDraggedInventoryItemPosition(clientX, clientY) {
       if (!draggedInventoryItem) return;
       draggedInventoryItemEl.style.transform = `translate(${clientX - 26}px, ${clientY - 26}px)`;
+    }
+
+    function getTrimmedCraftPattern() {
+      let minRow = 3, maxRow = -1, minCol = 3, maxCol = -1;
+      for (let i = 0; i < CRAFT_GRID_SIZE; i++) {
+        if (!craftingInventory[i]) continue;
+        const row = Math.floor(i / 3);
+        const col = i % 3;
+        minRow = Math.min(minRow, row);
+        maxRow = Math.max(maxRow, row);
+        minCol = Math.min(minCol, col);
+        maxCol = Math.max(maxCol, col);
+      }
+      if (maxRow === -1) return [];
+      const rows = [];
+      for (let row = minRow; row <= maxRow; row++) {
+        const cols = [];
+        for (let col = minCol; col <= maxCol; col++) {
+          cols.push(craftingInventory[row * 3 + col]?.id || null);
+        }
+        rows.push(cols);
+      }
+      return rows;
+    }
+
+    function patternsMatch(current, expected) {
+      if (current.length !== expected.length) return false;
+      for (let row = 0; row < current.length; row++) {
+        if (current[row].length !== expected[row].length) return false;
+        for (let col = 0; col < current[row].length; col++) {
+          if ((current[row][col] || null) !== (expected[row][col] || null)) return false;
+        }
+      }
+      return true;
+    }
+
+    function getCraftingResult() {
+      const current = getTrimmedCraftPattern();
+      if (!current.length) return null;
+      for (const recipe of CRAFTING_RECIPES) {
+        if (patternsMatch(current, recipe.pattern)) {
+          return { id: recipe.output.id, count: recipe.output.count };
+        }
+      }
+      return null;
+    }
+
+    function consumeCraftingInputs() {
+      for (let i = 0; i < CRAFT_GRID_SIZE; i++) {
+        const slot = craftingInventory[i];
+        if (!slot) continue;
+        slot.count -= 1;
+        if (slot.count <= 0) craftingInventory[i] = null;
+      }
     }
     function getItemLabel(id){
       const def = BLOCK_BY_ID[id];
@@ -464,7 +531,7 @@
     }
 
     function createInventorySlotElement(item, options = {}) {
-      const { label = '', selectedSlot = false, interactive = false, kind = 'hotbar', index = 0 } = options;
+      const { label = '', selectedSlot = false, interactive = false, kind = 'hotbar', index = 0, craftResult = false } = options;
         const slot = document.createElement('div');
       slot.className = 'slot'
         + (selectedSlot ? ' selected' : '')
@@ -486,6 +553,22 @@
         slot.addEventListener('mousedown', (e) => {
           e.preventDefault();
           if (e.button !== 0) return;
+          if (craftResult) {
+            const resultItem = getCraftingResult();
+            if (!resultItem) return;
+            if (draggedInventoryItem && draggedInventoryItem.id !== resultItem.id) return;
+            if (draggedInventoryItem && draggedInventoryItem.count + resultItem.count > MAX_STACK) return;
+            consumeCraftingInputs();
+            if (!draggedInventoryItem) {
+              draggedInventoryItem = { id: resultItem.id, count: resultItem.count };
+              draggedInventorySource = null;
+            } else {
+              draggedInventoryItem.count += resultItem.count;
+            }
+            renderInventoryUI();
+            updateDraggedInventoryItemPosition(e.clientX, e.clientY);
+            return;
+          }
           const slotItem = getInventorySlotValue(kind, index);
           if (!draggedInventoryItem && !slotItem) return;
           if (!draggedInventoryItem) {
@@ -527,6 +610,19 @@
     function renderInventoryPanel() {
       inventoryStorageEl.innerHTML = '';
       inventoryHotbarEl.innerHTML = '';
+      craftingGridEl.innerHTML = '';
+      craftingResultEl.innerHTML = '';
+      for (let i = 0; i < CRAFT_GRID_SIZE; i++) {
+        craftingGridEl.appendChild(createInventorySlotElement(craftingInventory[i], {
+          interactive: true,
+          kind: 'crafting',
+          index: i
+        }));
+      }
+      craftingResultEl.appendChild(createInventorySlotElement(getCraftingResult(), {
+        interactive: true,
+        craftResult: true
+      }));
       for (let i = 0; i < STORAGE_SIZE; i++) {
         inventoryStorageEl.appendChild(createInventorySlotElement(storageInventory[i], {
           interactive: true,
@@ -559,18 +655,26 @@
     function toggleInventory(open = !inventoryOpen) {
       inventoryOpen = open;
       inventoryOverlayEl.classList.toggle('hidden', !inventoryOpen);
-      if (!inventoryOpen && draggedInventoryItem && draggedInventorySource) {
-        const existing = getInventorySlotValue(draggedInventorySource.kind, draggedInventorySource.index);
-        if (!existing) setInventorySlotValue(draggedInventorySource.kind, draggedInventorySource.index, draggedInventoryItem);
+      if (!inventoryOpen && draggedInventoryItem) {
+        if (draggedInventorySource) {
+          const existing = getInventorySlotValue(draggedInventorySource.kind, draggedInventorySource.index);
+          if (!existing) setInventorySlotValue(draggedInventorySource.kind, draggedInventorySource.index, draggedInventoryItem);
+        } else {
+          addItemToInventory(draggedInventoryItem.id, draggedInventoryItem.count, true);
+        }
         clearDraggedInventoryItem();
       }
       renderInventoryUI();
     }
 
     inventoryOverlayEl.addEventListener('mousedown', (e) => {
-      if (e.target === inventoryOverlayEl && draggedInventoryItem && draggedInventorySource) {
-        const existing = getInventorySlotValue(draggedInventorySource.kind, draggedInventorySource.index);
-        if (!existing) setInventorySlotValue(draggedInventorySource.kind, draggedInventorySource.index, draggedInventoryItem);
+      if (e.target === inventoryOverlayEl && draggedInventoryItem) {
+        if (draggedInventorySource) {
+          const existing = getInventorySlotValue(draggedInventorySource.kind, draggedInventorySource.index);
+          if (!existing) setInventorySlotValue(draggedInventorySource.kind, draggedInventorySource.index, draggedInventoryItem);
+        } else {
+          addItemToInventory(draggedInventoryItem.id, draggedInventoryItem.count, true);
+        }
         clearDraggedInventoryItem();
         renderInventoryUI();
       }

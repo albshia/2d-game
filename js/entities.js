@@ -73,6 +73,7 @@
       player.hurtTimer = 0;
       for (let i = 0; i < hotbarInventory.length; i++) hotbarInventory[i] = null;
       for (let i = 0; i < storageInventory.length; i++) storageInventory[i] = null;
+      for (let i = 0; i < craftingInventory.length; i++) craftingInventory[i] = null;
       resetToolUnlockState();
       selected = 0;
       deathSequence.active = false;
