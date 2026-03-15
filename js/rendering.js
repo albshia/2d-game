@@ -219,7 +219,7 @@
       const spriteWidth = 16 * pixel;
       const spriteHeight = 32 * pixel;
       const pivotX = screenX + spriteWidth * 0.5;
-      const pivotY = screenY + spriteHeight * 0.18 - tileSize;
+      const pivotY = screenY + spriteHeight * 0.18 + tileSize;
 
       ctx.save();
       ctx.translate(pivotX, pivotY);
