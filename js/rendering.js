@@ -758,7 +758,7 @@
       const endY = Math.ceil((cam.y + canvas.height) / tileSize) + 1;
       function isAirBlock(gx, gy) {
         if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT) return true;
-        return !world[gx][gy];
+        return !world[gx][gy] || world[gx][gy] === 'water';
       }
 
       function blockTouchesAir(gx, gy) {
