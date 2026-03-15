@@ -781,9 +781,10 @@
           const t = world[gx][gy];
           if (t){
             const block = BLOCKS.find(b=>b.id===t);
+            const blockExposed = hasOpenSkyAt(gx, gy);
             ctx.fillStyle = block.color;
-            // Apply brightness to blocks
-            if (tileBrightness < 1) {
+            // Exposed blocks stay fully bright; only enclosed blocks are dimmed.
+            if (!blockExposed && tileBrightness < 1) {
               const rgb = hexToRgb(block.color);
               ctx.fillStyle = `rgb(${Math.floor(rgb.r * tileBrightness)}, ${Math.floor(rgb.g * tileBrightness)}, ${Math.floor(rgb.b * tileBrightness)})`;
             }
