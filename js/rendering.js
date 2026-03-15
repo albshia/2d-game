@@ -75,42 +75,146 @@
       return grounded;
     }
 
-    function hasDiamondArmorSet() {
-      return hasInventoryItem('diamond_boots')
-        && hasInventoryItem('diamond_leggings')
-        && hasInventoryItem('diamond_chestplate')
-        && hasInventoryItem('diamond_helmet');
+    function getArmorPalette(materialKey) {
+      if (materialKey === 'wood') return { main: '#9b6b3f', mid: '#7c5431', dark: '#5f3f24' };
+      if (materialKey === 'gold') return { main: '#f0c64c', mid: '#d9aa27', dark: '#b88915' };
+      if (materialKey === 'iron') return { main: '#c8c8cf', mid: '#a7a7b0', dark: '#878791' };
+      if (materialKey === 'diamond') return { main: '#6fdbe8', mid: '#58bfce', dark: '#4aa8b5' };
+      return null;
     }
 
-    function drawHeldTool(toolId, handX, handY, pixel) {
-      if (!toolId || player.handActionTimer <= 0) return;
-      const toolColor = '#74d9e6';
-      const handleColor = '#5a3a24';
-      ctx.fillStyle = handleColor;
-      ctx.fillRect(handX - pixel * 0.25, handY + pixel * 0.2, pixel * 0.5, pixel * 3.2);
-      ctx.fillStyle = toolColor;
-      if (toolId === 'diamond_sword') {
-        ctx.fillRect(handX - pixel * 0.65, handY - pixel * 1.9, pixel * 1.3, pixel * 2.2);
-        ctx.fillRect(handX - pixel * 1.0, handY - pixel * 0.1, pixel * 2.0, pixel * 0.35);
-      } else if (toolId === 'diamond_pickaxe') {
-        ctx.fillRect(handX - pixel * 1.5, handY - pixel * 1.2, pixel * 3.0, pixel * 0.9);
-      } else if (toolId === 'diamond_axe') {
-        ctx.fillRect(handX - pixel * 0.2, handY - pixel * 1.5, pixel * 1.8, pixel * 1.4);
-      } else if (toolId === 'diamond_shovel') {
-        ctx.fillRect(handX - pixel * 0.8, handY - pixel * 1.3, pixel * 1.6, pixel * 1.2);
+    function drawHeldItem(itemId, handX, handY, pixel, actionProgress = 0) {
+      if (!itemId) return;
+      const isTool = /_(?:shovel|sword|axe|pickaxe)$/.test(itemId);
+      if (!isTool) {
+        const itemDef = BLOCK_BY_ID[itemId];
+        if (!itemDef) return;
+        const idleOffsetX = pixel * 0.8;
+        const idleOffsetY = pixel * 1.5;
+        const bob = actionProgress * pixel * 0.8;
+        const size = Math.max(pixel * 2.6, tileSize * 0.18);
+        const x = handX - size * 0.5 + idleOffsetX;
+        const y = handY - size * 0.5 + idleOffsetY - bob;
+        ctx.fillStyle = itemDef.color;
+        ctx.fillRect(x, y, size, size);
+        ctx.fillStyle = 'rgba(255,255,255,0.22)';
+        ctx.fillRect(x, y, size * 0.28, size);
+        ctx.fillRect(x, y, size, size * 0.18);
+        ctx.fillStyle = 'rgba(0,0,0,0.16)';
+        ctx.fillRect(x + size * 0.62, y + size * 0.62, size * 0.24, size * 0.24);
+        ctx.strokeStyle = '#101010';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x, y, size, size);
+        return;
       }
+
+      const toolId = itemId;
+      const handleColor = '#5a3a24';
+      const toolColorMap = {
+        wood_shovel: '#b07a4a',
+        wood_sword: '#b07a4a',
+        wood_pickaxe: '#b07a4a',
+        wood_axe: '#b07a4a',
+        stone_shovel: '#7f7f7f',
+        stone_sword: '#7f7f7f',
+        stone_pickaxe: '#7f7f7f',
+        stone_axe: '#7f7f7f',
+        iron_shovel: '#c8c8cf',
+        iron_sword: '#c8c8cf',
+        iron_pickaxe: '#c8c8cf',
+        iron_axe: '#c8c8cf',
+        gold_shovel: '#f0c64c',
+        gold_sword: '#f0c64c',
+        gold_pickaxe: '#f0c64c',
+        gold_axe: '#f0c64c',
+        diamond_shovel: '#74d9e6',
+        diamond_sword: '#74d9e6',
+        diamond_pickaxe: '#74d9e6',
+        diamond_axe: '#74d9e6'
+      };
+      const toolColor = toolColorMap[toolId] || '#74d9e6';
+      const shadowColorMap = {
+        wood: '#8a5d36',
+        stone: '#5f5f5f',
+        gold: '#cf9f22',
+        iron: '#9fa0a8',
+        diamond: '#4db8c9'
+      };
+      const highlightColorMap = {
+        wood: '#c9935c',
+        stone: '#a6a6a6',
+        gold: '#ffd86a',
+        iron: '#e1e2e8',
+        diamond: '#a6f3ff'
+      };
+      const material = toolId.split('_')[0];
+      const shadowColor = shadowColorMap[material] || '#4db8c9';
+      const highlightColor = highlightColorMap[material] || '#a6f3ff';
+      const tex = Math.max(1, pixel * 0.35);
+      const lift = actionProgress * pixel * 3.2;
+      const toolHandY = handY - lift;
+
+      function texturedRect(x, y, w, h) {
+        ctx.fillStyle = toolColor;
+        ctx.fillRect(x, y, w, h);
+        ctx.fillStyle = shadowColor;
+        for (let iy = y + tex; iy < y + h; iy += tex * 2) {
+          for (let ix = x + ((Math.round((iy - y) / tex) % 2) ? tex : 0); ix < x + w; ix += tex * 2) {
+            ctx.fillRect(ix, iy, tex, tex);
+          }
+        }
+        ctx.fillStyle = highlightColor;
+        ctx.fillRect(x, y, Math.max(1, w * 0.22), h);
+        ctx.fillRect(x, y, w, Math.max(1, h * 0.16));
+      }
+
+      function pixelCell(x, y, cellsX = 1, cellsY = 1) {
+        texturedRect(x, y, tex * cellsX, tex * cellsY);
+      }
+
+      ctx.fillStyle = handleColor;
+      ctx.fillRect(handX - pixel * 0.25, toolHandY + pixel * 0.2, pixel * 0.5, pixel * 3.2);
+      ctx.fillStyle = toolColor;
+      if (toolId.endsWith('_sword')) {
+        const centerX = handX - tex * 0.5;
+        pixelCell(centerX, toolHandY - tex * 6, 1, 1);
+        pixelCell(centerX - tex * 0.5, toolHandY - tex * 5, 2, 1);
+        pixelCell(centerX - tex * 0.5, toolHandY - tex * 4, 2, 1);
+        pixelCell(centerX - tex, toolHandY - tex * 3, 3, 1);
+        pixelCell(centerX - tex, toolHandY - tex * 2, 3, 1);
+        pixelCell(centerX - tex * 1.5, toolHandY - tex, 4, 0.8);
+        pixelCell(centerX - tex * 2, toolHandY + tex * 0.2, 5, 0.7);
+      } else if (toolId.endsWith('_pickaxe')) {
+        pixelCell(handX - tex * 3, toolHandY - tex * 4, 2, 1);
+        pixelCell(handX - tex, toolHandY - tex * 4.8, 2, 1);
+        pixelCell(handX + tex, toolHandY - tex * 4, 2, 1);
+        pixelCell(handX - tex * 1.2, toolHandY - tex * 3, 1, 1.2);
+        pixelCell(handX + tex * 0.2, toolHandY - tex * 3, 1, 1.2);
+      } else if (toolId.endsWith('_axe')) {
+        pixelCell(handX - tex * 0.2, toolHandY - tex * 4.8, 2.4, 1.2);
+        pixelCell(handX - tex * 1.4, toolHandY - tex * 4.0, 3.2, 1.4);
+        pixelCell(handX - tex * 1.1, toolHandY - tex * 2.8, 2.2, 1.1);
+      } else if (toolId.endsWith('_shovel')) {
+        pixelCell(handX - tex * 1.2, toolHandY - tex * 4.8, 2.4, 1.1);
+        pixelCell(handX - tex * 1.6, toolHandY - tex * 3.7, 3.2, 1.4);
+        pixelCell(handX - tex, toolHandY - tex * 2.5, 2, 0.9);
+      }
+    }
+
+    function getHandActionProgress() {
+      if (miningState.active && miningState.required > 0) {
+        return Math.sin((miningState.swingTimer / HAND_ACTION_DURATION) * Math.PI);
+      }
+      if (player.handActionTimer <= 0) return 0;
+      const actionProgress = 1 - (player.handActionTimer / HAND_ACTION_DURATION);
+      return Math.sin(actionProgress * Math.PI);
     }
 
     function drawSteve(screenX, screenY, pixel, facing, walkCycle, moving) {
       const dir = facing >= 0 ? 1 : -1;
       const legSwing = moving ? Math.sin(walkCycle) * pixel * 0.9 : 0;
       const armSwing = moving ? -Math.sin(walkCycle) * pixel * 0.8 : 0;
-      const actionProgress = player.handActionTimer > 0
-        ? 1 - (player.handActionTimer / HAND_ACTION_DURATION)
-        : 0;
-      const actionLift = player.handActionTimer > 0
-        ? Math.sin(actionProgress * Math.PI) * pixel * 3.2
-        : 0;
+      const actionLift = getHandActionProgress() * pixel * 3.2;
 
       const headW = 8 * pixel, headH = 8 * pixel;
       const bodyW = 8 * pixel, bodyH = 12 * pixel;
@@ -156,18 +260,20 @@
       ctx.fillRect(bodyX, bodyY + bodyH + legSwing, limbW, limbH);
       ctx.fillRect(bodyX + bodyW - limbW, bodyY + bodyH - legSwing, limbW, limbH);
 
-      if (hasDiamondArmorSet()) {
-        ctx.fillStyle = '#6fdbe8';
+      const armorPalette = getArmorPalette(getBestUnlockedArmorMaterial());
+      if (armorPalette) {
+        ctx.fillStyle = armorPalette.main;
         ctx.fillRect(headX, headY, headW, 2 * pixel); // helmet
         ctx.fillRect(bodyX, bodyY, bodyW, bodyH); // chestplate
-        ctx.fillStyle = '#58bfce';
+        ctx.fillStyle = armorPalette.mid;
         ctx.fillRect(bodyX, bodyY + bodyH + legSwing, limbW, 7 * pixel); // leggings
         ctx.fillRect(bodyX + bodyW - limbW, bodyY + bodyH - legSwing, limbW, 7 * pixel);
-        ctx.fillStyle = '#4aa8b5';
+        ctx.fillStyle = armorPalette.dark;
         ctx.fillRect(bodyX, bodyY + bodyH + legSwing + 7 * pixel, limbW, 5 * pixel); // boots
         ctx.fillRect(bodyX + bodyW - limbW, bodyY + bodyH - legSwing + 7 * pixel, limbW, 5 * pixel);
       }
-      drawHeldTool(player.handToolId, bodyX + bodyW + limbW * 0.5, rightArmY + limbH * 0.5, pixel);
+      const selectedItemId = getSelectedItemId();
+      drawHeldItem(player.handToolId || selectedItemId, bodyX + bodyW + limbW * 0.5, rightArmY + limbH * 0.5, pixel, getHandActionProgress());
 
       // Outline
       ctx.strokeStyle = '#101010';
@@ -184,12 +290,7 @@
       const dir = facing >= 0 ? 1 : -1;
       const legSwing = moving ? Math.sin(walkCycle) * pixel * 0.9 : 0;
       const armSwing = moving ? -Math.sin(walkCycle) * pixel * 0.8 : 0;
-      const actionProgress = player.handActionTimer > 0
-        ? 1 - (player.handActionTimer / HAND_ACTION_DURATION)
-        : 0;
-      const actionLift = player.handActionTimer > 0
-        ? Math.sin(actionProgress * Math.PI) * pixel * 3.2
-        : 0;
+      const actionLift = getHandActionProgress() * pixel * 3.2;
 
       const headW = 8 * pixel, headH = 8 * pixel;
       const bodyW = 8 * pixel, bodyH = 12 * pixel;
@@ -236,18 +337,20 @@
       ctx.fillRect(bodyX, bodyY + bodyH + legSwing, legW, legH);
       ctx.fillRect(bodyX + bodyW - legW, bodyY + bodyH - legSwing, legW, legH);
 
-      if (hasDiamondArmorSet()) {
-        ctx.fillStyle = '#6fdbe8';
+      const armorPalette = getArmorPalette(getBestUnlockedArmorMaterial());
+      if (armorPalette) {
+        ctx.fillStyle = armorPalette.main;
         ctx.fillRect(headX, headY, headW, 2 * pixel); // helmet
         ctx.fillRect(bodyX, bodyY, bodyW, bodyH); // chestplate
-        ctx.fillStyle = '#58bfce';
+        ctx.fillStyle = armorPalette.mid;
         ctx.fillRect(bodyX, bodyY + bodyH + legSwing, legW, 7 * pixel); // leggings
         ctx.fillRect(bodyX + bodyW - legW, bodyY + bodyH - legSwing, legW, 7 * pixel);
-        ctx.fillStyle = '#4aa8b5';
+        ctx.fillStyle = armorPalette.dark;
         ctx.fillRect(bodyX, bodyY + bodyH + legSwing + 7 * pixel, legW, 5 * pixel); // boots
         ctx.fillRect(bodyX + bodyW - legW, bodyY + bodyH - legSwing + 7 * pixel, legW, 5 * pixel);
       }
-      drawHeldTool(player.handToolId, bodyX + bodyW + armW * 0.5, rightArmY + armH * 0.5, pixel);
+      const selectedItemId = getSelectedItemId();
+      drawHeldItem(player.handToolId || selectedItemId, bodyX + bodyW + armW * 0.5, rightArmY + armH * 0.5, pixel, getHandActionProgress());
 
       // Outline
       ctx.strokeStyle = '#101010';

@@ -1,6 +1,12 @@
     let last = performance.now();
     function loop(t){
       const dt = Math.min((t-last)/1000, 0.05); last = t;
+      if (deathSequence.active) {
+        deathSequence.timer = Math.max(0, deathSequence.timer - dt);
+        const progress = 1 - (deathSequence.timer / deathSequence.duration);
+        cameraZoom = deathSequence.zoomStart + (deathSequence.zoomTarget - deathSequence.zoomStart) * progress;
+        updateTileSize();
+      }
       // input
       if (player.handActionTimer > 0) {
         player.handActionTimer = Math.max(0, player.handActionTimer - dt);
@@ -35,11 +41,11 @@
         c.cx += c.speed * dt * (weather === 'rain' ? 1.2 : 1.0);
         if (c.cx - c.widthTiles / 2 > WIDTH + 8) {
           c.cx = -8 - c.widthTiles / 2;
-          c.cy = HEIGHT * 0.44 + Math.random() * (HEIGHT * 0.38);
+          c.cy = HEIGHT * 0.62 + Math.random() * (HEIGHT * 0.26);
         }
       }
       // Timed block mining (hold left click).
-      if (mouseButtons.left) {
+      if (!deathSequence.active && mouseButtons.left) {
         const { gx, gy } = getMouseGridTarget();
         if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT || !world[gx][gy] || !isWithinInteractionRangeTile(gx, gy)) {
           resetMining();
@@ -49,13 +55,17 @@
             miningState.gx = gx;
             miningState.gy = gy;
             miningState.progress = 0;
+            miningState.swingTimer = 0;
           }
           const blockId = world[gx][gy];
           const baseRequired = BREAK_TIME[blockId] ?? 0.8;
           const required = baseRequired / getToolMiningMultiplier(blockId);
           miningState.required = required;
           if (Number.isFinite(required)) {
+            miningState.swingTimer = (miningState.swingTimer + dt) % HAND_ACTION_DURATION;
             miningState.progress += dt;
+            player.handToolId = getActionToolForBlock(blockId);
+            player.handActionSide = (gx + 0.5) >= player.x ? 1 : -1;
             if (miningState.progress >= required) {
               breakBlockAt(gx, gy);
               resetMining();
@@ -65,66 +75,67 @@
       } else {
         resetMining();
       }
-      let ax = 0;
-      if (keys.left) ax -= 1; if (keys.right) ax += 1;
-      const targetVx = ax * player.speed;
-      // simple accel
-      player.vx += (targetVx - player.vx) * Math.min(10*dt, 1);
-      if (Math.abs(player.vx) > 0.1) player.facing = player.vx > 0 ? 1 : -1;
-      // gravity
-      const onLadder = isOnLadder();
-      if (!onLadder) {
-        player.vy += -25 * dt;
-      } else {
-        // On ladder - allow climbing
-        let climbSpeed = 0;
-        if (keys.jump) climbSpeed += player.speed * 0.8; // Up
-        if (keys.down) climbSpeed -= player.speed * 0.8; // Down
-        player.vy += (climbSpeed - player.vy) * Math.min(15*dt, 1); // Smooth climbing
-      }
-      const wasGrounded = player.grounded;
-      if (!wasGrounded && player.vy < 0) {
-        player.maxFallSpeed = Math.max(player.maxFallSpeed, -player.vy);
-      }
-
-      // jump (if grounded)
-      // Apply movement in sub-steps to avoid deep penetration at high fall speed.
-      const moveX = player.vx * dt;
-      const moveY = player.vy * dt;
-      const maxMove = Math.max(Math.abs(moveX), Math.abs(moveY));
-      const moveSteps = Math.max(1, Math.ceil(maxMove / 0.35));
-      let grounded = false;
-      for (let s = 0; s < moveSteps; s++) {
-        player.x += moveX / moveSteps;
-        player.y += moveY / moveSteps;
-        if (resolveCollisions()) grounded = true;
-      }
-      if (!grounded && player.vy < 0) {
-        player.maxFallSpeed = Math.max(player.maxFallSpeed, -player.vy);
-      }
-      player.grounded = grounded;
-      if (grounded && !wasGrounded) {
-        const impactSpeed = player.maxFallSpeed;
-        if (impactSpeed > 12) {
-          const fallDamage = Math.max(1, Math.floor((impactSpeed - 12) / 2));
-          damagePlayer(fallDamage);
+      if (!deathSequence.active) {
+        let ax = 0;
+        if (keys.left) ax -= 1; if (keys.right) ax += 1;
+        const targetVx = ax * player.speed;
+        // simple accel
+        player.vx += (targetVx - player.vx) * Math.min(10*dt, 1);
+        if (Math.abs(player.vx) > 0.1) player.facing = player.vx > 0 ? 1 : -1;
+        // gravity
+        const onLadder = isOnLadder();
+        if (!onLadder) {
+          player.vy += -25 * dt;
+        } else {
+          // On ladder - allow climbing
+          let climbSpeed = 0;
+          if (keys.jump) climbSpeed += player.speed * 0.8; // Up
+          if (keys.down) climbSpeed -= player.speed * 0.8; // Down
+          player.vy += (climbSpeed - player.vy) * Math.min(15*dt, 1); // Smooth climbing
         }
-        player.maxFallSpeed = 0;
-      } else if (grounded) {
-        player.maxFallSpeed = 0;
-      }
-      if (grounded && keys.jump && !onLadder){ player.vy = 9.0; }
-      if (Math.abs(player.vx) > 0.15 && grounded) {
-        player.walkCycle += dt * 14;
-      }
+        const wasGrounded = player.grounded;
+        if (!wasGrounded && player.vy < 0) {
+          player.maxFallSpeed = Math.max(player.maxFallSpeed, -player.vy);
+        }
 
-      // Clamp horizontal bounds; allow falling below world so void death can trigger.
-      player.x = Math.max(0.2, Math.min(WIDTH-0.2, player.x));
-      player.y = Math.min(HEIGHT-0.2, player.y);
-      if (player.y < -1) {
-        player.health = 0;
-        updateHealthUI();
-        respawnPlayer();
+        const moveX = player.vx * dt;
+        const moveY = player.vy * dt;
+        const maxMove = Math.max(Math.abs(moveX), Math.abs(moveY));
+        const moveSteps = Math.max(1, Math.ceil(maxMove / 0.35));
+        let grounded = false;
+        for (let s = 0; s < moveSteps; s++) {
+          player.x += moveX / moveSteps;
+          player.y += moveY / moveSteps;
+          if (resolveCollisions()) grounded = true;
+        }
+        if (!grounded && player.vy < 0) {
+          player.maxFallSpeed = Math.max(player.maxFallSpeed, -player.vy);
+        }
+        player.grounded = grounded;
+        if (grounded && !wasGrounded) {
+          const impactSpeed = player.maxFallSpeed;
+          if (impactSpeed > 12) {
+            const fallDamage = Math.max(1, Math.floor((impactSpeed - 12) / 2));
+            damagePlayer(fallDamage);
+          }
+          player.maxFallSpeed = 0;
+        } else if (grounded) {
+          player.maxFallSpeed = 0;
+        }
+        if (grounded && keys.jump && !onLadder){ player.vy = 9.0; }
+        if (Math.abs(player.vx) > 0.15 && grounded) {
+          player.walkCycle += dt * 14;
+        }
+
+        // Clamp horizontal bounds; allow falling below world so void death can trigger.
+        player.x = Math.max(0.2, Math.min(WIDTH-0.2, player.x));
+        player.y = Math.min(HEIGHT-0.2, player.y);
+        if (player.y < -1) {
+          startDeathSequence();
+        }
+      } else {
+        player.vx = 0;
+        player.vy = 0;
       }
 
       // Update hostile arrows
@@ -147,7 +158,7 @@
         const bottom = player.y - PLAYER_COLLIDER_H / 2;
         const top = player.y + PLAYER_COLLIDER_H / 2;
         if (a.x >= left && a.x <= right && a.y >= bottom && a.y <= top) {
-          damagePlayer(a.damage);
+          damagePlayer(a.damage, a.x);
           hostileArrows.splice(i, 1);
         }
       }
@@ -206,21 +217,19 @@
                 explodeBlocksAt(mob.x, mob.y, 2.6);
                 const blastDist = Math.hypot(player.x - mob.x, player.y - mob.y);
                 if (blastDist < 1.9) {
-                  player.health = 0;
-                  updateHealthUI();
-                  respawnPlayer();
+                  startDeathSequence();
                 } else if (blastDist < 5.0) {
                   // Further from center: heavy but non-lethal-style blast damage.
                   const t = (blastDist - 1.9) / (5.0 - 1.9); // 0 near core -> 1 at edge
                   const dmg = 10 - t * 7; // ~10 down to ~3
-                  damagePlayer(Math.max(2, dmg));
+                  damagePlayer(Math.max(2, dmg), mob.x);
                 }
                 mob.health = 0;
                 return;
               }
             }
           } else if (dist < 1.35 && Math.abs(dy) < 1.6 && mob.attackTimer <= 0) {
-            damagePlayer(mob.damage);
+            damagePlayer(mob.damage, mob.x);
             mob.attackTimer = mob.hitCooldown;
           }
         } else {
@@ -337,6 +346,10 @@
       });
 
       mobs = mobs.filter(m => !m.dead && (m.health == null || m.health > 0));
+
+      if (deathSequence.active && deathSequence.timer <= 0) {
+        respawnPlayer();
+      }
 
       draw();
       requestAnimationFrame(loop);

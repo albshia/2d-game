@@ -1,6 +1,12 @@
     const WIDTH = 500, HEIGHT = 200;
     let tileSize = 24;
+    let cameraZoom = 1;
     const world = Array.from({length: WIDTH}, ()=>Array.from({length: HEIGHT}, ()=>null));
+
+    function updateTileSize() {
+      const baseTileSize = Math.max(12, Math.min(36, Math.floor(Math.min(innerWidth, innerHeight) / 25)));
+      tileSize = Math.max(8, Math.floor(baseTileSize * cameraZoom));
+    }
 
     // Generate smooth layered terrain using Perlin-like noise
     function generateTerrain() {
@@ -164,9 +170,12 @@
         }
       }
 
-      // Add identical trees (logs + grass-leaf canopy).
+      // Add identical trees (logs + grass-leaf canopy) with wider spacing.
+      let lastTreeX = -999;
+      const minTreeSpacing = 9;
       for (let x = 4; x < WIDTH - 4; x += 5) {
         if (Math.random() > 0.32) continue;
+        if (x - lastTreeX < minTreeSpacing) continue;
         let groundY = -1;
         for (let y = HEIGHT - 2; y >= 1; y--) {
           if (world[x][y] === 'grass' && world[x][y + 1] === null) {
@@ -187,9 +196,11 @@
         for (let ty = groundY + 1; ty <= groundY + 4; ty++) {
           world[x][ty] = 'log';
         }
+        lastTreeX = x;
 
         // Fixed canopy made from grass blocks.
         const canopy = [
+          [-1, 3], [0, 3], [1, 3],
           [-2, 4], [-1, 4], [0, 4], [1, 4], [2, 4],
           [-2, 5], [-1, 5], [0, 5], [1, 5], [2, 5],
           [-1, 6], [0, 6], [1, 6]

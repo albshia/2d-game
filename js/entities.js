@@ -25,6 +25,7 @@
       maxFallSpeed: 0
     };
     let spawnPoint = { x: spawn.x, y: spawn.y };
+    let deathSequence = { active: false, timer: 0, duration: 1.5, zoomStart: 1, zoomTarget: 0.58 };
     const PLAYER_COLLIDER_H = 1.9;
     const HAND_ACTION_DURATION = 0.16;
     const keys = { left:false, right:false, jump:false, down:false };
@@ -68,41 +69,78 @@
       player.regenAccum = 0;
       player.maxFallSpeed = 0;
       player.handToolId = null;
+      player.handActionTimer = 0;
+      player.hurtTimer = 0;
       for (let i = 0; i < hotbarInventory.length; i++) hotbarInventory[i] = null;
       resetToolUnlockState();
       selected = 0;
+      deathSequence.active = false;
+      deathSequence.timer = 0;
+      cameraZoom = 1;
+      updateTileSize();
       renderHotbar();
       updateHealthUI();
     }
 
+    function startDeathSequence() {
+      if (deathSequence.active) return;
+      deathSequence.active = true;
+      deathSequence.timer = deathSequence.duration;
+      deathSequence.zoomStart = cameraZoom;
+      player.health = 0;
+      player.vx = 0;
+      player.vy = 0;
+      player.handToolId = null;
+      player.handActionTimer = 0;
+      player.attackCooldown = 0;
+      player.invulnTimer = 0;
+      player.regenDelay = 0;
+      player.regenAccum = 0;
+      updateHealthUI();
+    }
+
     function getBestArmorReduction() {
-      const fullSet = hasInventoryItem('diamond_boots')
-        && hasInventoryItem('diamond_leggings')
-        && hasInventoryItem('diamond_chestplate')
-        && hasInventoryItem('diamond_helmet');
-      if (fullSet) return 0.55;
+      const armorMaterial = getBestUnlockedArmorMaterial();
+      if (armorMaterial === 'gold') return 0.25;
+      if (armorMaterial === 'iron') return 0.4;
+      if (armorMaterial === 'diamond') return 0.55;
       return 0;
     }
 
-    function damagePlayer(amount) {
-      if (player.invulnTimer > 0) return;
+    function damagePlayer(amount, sourceX = null) {
+      if (player.invulnTimer > 0 || deathSequence.active) return;
       const reduction = getBestArmorReduction();
       const reducedAmount = Math.max(0.5, amount * (1 - reduction));
       player.hurtTimer = 0.25;
       player.health = Math.max(0, player.health - reducedAmount);
+      if (sourceX != null) {
+        const away = player.x >= sourceX ? 1 : -1;
+        player.vx = away * Math.max(5.5, Math.abs(player.vx));
+        player.vy = Math.max(player.vy, 4.5);
+        player.grounded = false;
+      }
       player.invulnTimer = 0.45;
       player.regenDelay = 6.0; // Wait before regenerating again.
       player.regenAccum = 0;
       updateHealthUI();
       if (player.health <= 0) {
-        respawnPlayer();
+        startDeathSequence();
       }
     }
 
-    function damageMob(mob, amount) {
+    function damageMob(mob, amount, sourceX = null) {
       if (!mob || mob.health == null || mob.health <= 0) return;
       mob.hurtTimer = 0.25;
       mob.health -= amount;
+      if (sourceX != null) {
+        const away = mob.x >= sourceX ? 1 : -1;
+        mob.vx = away * Math.max(4.8, Math.abs(mob.vx || 0));
+        mob.vy = Math.max(mob.vy || 0, 4.0);
+        mob.grounded = false;
+      }
+      if (!mob.hostile && mob.health <= 0) {
+        addItemToInventory('meat', 1);
+      }
     }
 
     function isNightTime() {
@@ -210,7 +248,7 @@
         const heightTiles = rows * cell;
         clouds.push({
           cx: Math.random() * (WIDTH + 16) - 8,
-          cy: HEIGHT * 0.44 + Math.random() * (HEIGHT * 0.38),
+          cy: HEIGHT * 0.62 + Math.random() * (HEIGHT * 0.26),
           speed: 0.28 + Math.random() * 0.44, // tiles per second
           cols,
           rows,
@@ -435,9 +473,11 @@
         if (Math.abs(x + 0.5 - player.x) < 5) continue;
         if (mode === 'cave' || mode === 'rain_day') {
           const gx = Math.floor(x + 0.5);
-          const gy = Math.floor(y + h * 0.5);
-          // Daytime/rain daytime hostiles must spawn under a roof (inside caves).
-          if (hasOpenSkyAt(gx, gy)) continue;
+          const feetY = Math.floor(y - h * 0.5);
+          const headY = Math.floor(y + h * 0.5);
+          // Daytime hostiles must stay below the surface and under a solid roof.
+          if (headY >= surface - 1) continue;
+          if (hasOpenSkyAt(gx, feetY) || hasOpenSkyAt(gx, headY)) continue;
         }
         if (canSpawnEntityAt(x + 0.5, y, w, h)) {
           return { x: x + 0.5, y };

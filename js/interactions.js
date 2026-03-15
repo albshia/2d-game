@@ -18,12 +18,15 @@
       gold_ore: 1.9,
       diamond_ore: 2.2
     };
-    let miningState = { active: false, gx: 0, gy: 0, progress: 0, required: 0 };
+    let miningState = { active: false, gx: 0, gy: 0, progress: 0, required: 0, swingTimer: 0 };
 
     function resetMining() {
+      const wasActive = miningState.active;
       miningState.active = false;
       miningState.progress = 0;
       miningState.required = 0;
+      miningState.swingTimer = 0;
+      if (wasActive && player.handActionTimer <= 0) player.handToolId = null;
     }
 
     function getSelectedItemId() {
@@ -33,6 +36,10 @@
 
     function getPlayerAttackDamage() {
       const id = getSelectedItemId();
+      if (id === 'wood_sword') return 6;
+      if (id === 'gold_sword') return 8;
+      if (id === 'stone_sword') return 8.5;
+      if (id === 'iron_sword') return 9;
       if (id === 'diamond_sword') return 11;
       return 4;
     }
@@ -41,12 +48,24 @@
       const id = getSelectedItemId();
       if (!id) return 1;
       if ((blockId === 'grass' || blockId === 'dirt') && id.endsWith('_shovel')) {
+        if (id === 'wood_shovel') return 1.8;
+        if (id === 'gold_shovel') return 2.2;
+        if (id === 'stone_shovel') return 2.45;
+        if (id === 'iron_shovel') return 2.7;
         if (id === 'diamond_shovel') return 3.2;
       }
       if ((blockId === 'stone' || blockId.endsWith('_ore')) && id.endsWith('_pickaxe')) {
+        if (id === 'wood_pickaxe') return 1.8;
+        if (id === 'gold_pickaxe') return 2.2;
+        if (id === 'stone_pickaxe') return 2.45;
+        if (id === 'iron_pickaxe') return 2.7;
         if (id === 'diamond_pickaxe') return 3.3;
       }
       if (blockId === 'log' && id.endsWith('_axe')) {
+        if (id === 'wood_axe') return 1.8;
+        if (id === 'gold_axe') return 2.2;
+        if (id === 'stone_axe') return 2.45;
+        if (id === 'iron_axe') return 2.7;
         if (id === 'diamond_axe') return 3.2;
       }
       return 1;
@@ -55,9 +74,9 @@
     function getActionToolForBlock(blockId) {
       const id = getSelectedItemId();
       if (!id) return null;
-      if ((blockId === 'grass' || blockId === 'dirt') && id === 'diamond_shovel') return id;
-      if ((blockId === 'stone' || blockId.endsWith('_ore')) && id === 'diamond_pickaxe') return id;
-      if (blockId === 'log' && id === 'diamond_axe') return id;
+      if ((blockId === 'grass' || blockId === 'dirt') && id.endsWith('_shovel')) return id;
+      if ((blockId === 'stone' || blockId.endsWith('_ore')) && id.endsWith('_pickaxe')) return id;
+      if (blockId === 'log' && id.endsWith('_axe')) return id;
       return null;
     }
 
@@ -91,7 +110,11 @@
         if (lowerY + 1 < HEIGHT && world[gx][lowerY + 1] === 'door') world[gx][lowerY + 1] = null;
         addItemToInventory('door', 1);
       } else {
-        addItemToInventory(getDropItemId(block), 1);
+        if (block === 'iron_ore') registerMaterialAcquired('iron');
+        if (block === 'gold_ore') registerMaterialAcquired('gold');
+        if (block === 'diamond_ore') registerMaterialAcquired('diamond');
+        const dropItemId = getDropItemId(block);
+        if (dropItemId) addItemToInventory(dropItemId, 1);
         world[gx][gy] = null;
       }
       player.handActionSide = (gx + 0.5) >= player.x ? 1 : -1;
@@ -130,6 +153,7 @@
     }
 
     function handleBlockAction(e) {
+      if (deathSequence.active) return;
       const { gx, gy, worldPx, worldPy } = getMouseGridTarget();
       if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT) return;
       let acted = false;
@@ -157,9 +181,9 @@
       if (e.button === 0 || mouseButtons.left) {
         const mobTarget = findMobAtPointer();
         if (mobTarget && player.attackCooldown <= 0) {
-          damageMob(mobTarget, getPlayerAttackDamage());
+          damageMob(mobTarget, getPlayerAttackDamage(), player.x);
           player.attackCooldown = 0.28;
-          player.handToolId = getSelectedItemId() === 'diamond_sword' ? 'diamond_sword' : null;
+          player.handToolId = getSelectedItemId()?.endsWith('_sword') ? getSelectedItemId() : null;
           player.handActionSide = mobTarget.x >= player.x ? 1 : -1;
           player.handActionTimer = HAND_ACTION_DURATION;
           return;
@@ -180,6 +204,16 @@
           const selectedItem = hotbarInventory[selected];
           if (!selectedItem || selectedItem.count <= 0) return;
           const selectedBlock = selectedItem.id;
+          if (selectedBlock === 'meat') {
+            if (player.health >= player.maxHealth) return;
+            player.health = Math.min(player.maxHealth, player.health + (1 + Math.floor(Math.random() * 2)));
+            player.regenDelay = 0;
+            player.regenAccum = 0;
+            updateHealthUI();
+            consumeSelectedItem(1);
+            acted = true;
+            return;
+          }
           if (!isPlaceableItem(selectedBlock)) return;
           if (selectedBlock === 'door') {
             // Place 2-block tall door from lower block (clicked) upward
@@ -260,6 +294,6 @@
 
     canvas.addEventListener('contextmenu', e => e.preventDefault());
 
-    function resize(){ canvas.width = innerWidth; canvas.height = innerHeight; tileSize = Math.max(12, Math.min(36, Math.floor(Math.min(innerWidth, innerHeight) / 25))); }
+    function resize(){ canvas.width = innerWidth; canvas.height = innerHeight; updateTileSize(); }
     window.addEventListener('resize', resize); resize();
 
