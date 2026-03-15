@@ -209,6 +209,22 @@
       return true;
     }
 
+    function collectMatchingInventoryItems(itemId) {
+      if (!itemId) return;
+      if (!draggedInventoryItem) {
+        draggedInventoryItem = { id: itemId, count: 0 };
+        draggedInventorySource = null;
+      }
+      for (const slots of getAllInventoryContainers()) {
+        for (let i = 0; i < slots.length; i++) {
+          const slot = slots[i];
+          if (!slot || slot.id !== itemId) continue;
+          draggedInventoryItem.count += slot.count;
+          slots[i] = null;
+        }
+      }
+    }
+
     function getTrimmedCraftPattern() {
       let minRow = 3, maxRow = -1, minCol = 3, maxCol = -1;
       for (let i = 0; i < CRAFT_GRID_SIZE; i++) {
@@ -610,6 +626,12 @@
           }
           if (e.button !== 0) return;
           const slotItem = getInventorySlotValue(kind, index);
+          if (e.detail >= 2 && slotItem) {
+            collectMatchingInventoryItems(slotItem.id);
+            renderInventoryUI();
+            updateDraggedInventoryItemPosition(e.clientX, e.clientY);
+            return;
+          }
           if (!draggedInventoryItem && !slotItem) return;
           if (!draggedInventoryItem) {
             draggedInventoryItem = slotItem;
