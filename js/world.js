@@ -5,7 +5,7 @@
 
     function updateTileSize() {
       const baseTileSize = Math.max(12, Math.min(36, Math.floor(Math.min(innerWidth, innerHeight) / 25)));
-      tileSize = Math.max(8, Math.floor(baseTileSize * cameraZoom));
+      tileSize = Math.max(6, Math.floor(baseTileSize * cameraZoom));
     }
 
     // Generate smooth layered terrain using Perlin-like noise

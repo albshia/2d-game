@@ -25,7 +25,7 @@
       maxFallSpeed: 0
     };
     let spawnPoint = { x: spawn.x, y: spawn.y };
-    let deathSequence = { active: false, timer: 0, duration: 1.5, zoomStart: 1, zoomTarget: 0.58 };
+    let deathSequence = { active: false, timer: 0, duration: 1.5, zoomStart: 1, zoomTarget: 0.42 };
     const PLAYER_COLLIDER_H = 1.9;
     const HAND_ACTION_DURATION = 0.16;
     const keys = { left:false, right:false, jump:false, down:false };
