@@ -46,8 +46,10 @@
     ];
     let selected = 0;
     const HOTBAR_SIZE = 10;
+    const STORAGE_SIZE = 30;
     const MAX_STACK = 64;
     const hotbarInventory = Array.from({length: HOTBAR_SIZE}, () => null);
+    const storageInventory = Array.from({length: STORAGE_SIZE}, () => null);
     const BLOCK_BY_ID = Object.fromEntries(BLOCKS.map(b => [b.id, b]));
     const MATERIAL_TIERS = [
       {
@@ -133,6 +135,44 @@
     const MATERIAL_ORDER = ['wood', 'gold', 'stone', 'iron', 'diamond'];
 
     const hotbarEl = document.getElementById('hotbar');
+    const inventoryOverlayEl = document.getElementById('inventoryOverlay');
+    const inventoryStorageEl = document.getElementById('inventoryStorage');
+    const inventoryHotbarEl = document.getElementById('inventoryHotbar');
+    const draggedInventoryItemEl = document.getElementById('draggedInventoryItem');
+    let inventoryOpen = false;
+    let draggedInventoryItem = null;
+    let draggedInventorySource = null;
+
+    function getAllInventoryContainers() {
+      return [hotbarInventory, storageInventory];
+    }
+
+    function findInventorySlotRef(kind, index) {
+      const slots = kind === 'storage' ? storageInventory : hotbarInventory;
+      return { slots, kind, index };
+    }
+
+    function getInventorySlotValue(kind, index) {
+      const ref = findInventorySlotRef(kind, index);
+      return ref.slots[index];
+    }
+
+    function setInventorySlotValue(kind, index, value) {
+      const ref = findInventorySlotRef(kind, index);
+      ref.slots[index] = value;
+    }
+
+    function clearDraggedInventoryItem() {
+      draggedInventoryItem = null;
+      draggedInventorySource = null;
+      draggedInventoryItemEl.innerHTML = '';
+      draggedInventoryItemEl.style.transform = 'translate(-9999px, -9999px)';
+    }
+
+    function updateDraggedInventoryItemPosition(clientX, clientY) {
+      if (!draggedInventoryItem) return;
+      draggedInventoryItemEl.style.transform = `translate(${clientX - 26}px, ${clientY - 26}px)`;
+    }
     function getItemLabel(id){
       const def = BLOCK_BY_ID[id];
       if (!def) return id;
@@ -147,8 +187,10 @@
     }
     function getInventoryCount(id) {
       let count = 0;
-      for (const slot of hotbarInventory) {
-        if (slot && slot.id === id) count += slot.count;
+      for (const slots of getAllInventoryContainers()) {
+        for (const slot of slots) {
+          if (slot && slot.id === id) count += slot.count;
+        }
       }
       return count;
     }
@@ -172,10 +214,12 @@
     function removeItemsFromInventory(itemIds) {
       let removed = false;
       const idSet = new Set(itemIds);
-      for (let i = 0; i < HOTBAR_SIZE; i++) {
-        if (hotbarInventory[i] && idSet.has(hotbarInventory[i].id)) {
-          hotbarInventory[i] = null;
-          removed = true;
+      for (const slots of getAllInventoryContainers()) {
+        for (let i = 0; i < slots.length; i++) {
+          if (slots[i] && idSet.has(slots[i].id)) {
+            slots[i] = null;
+            removed = true;
+          }
         }
       }
       return removed;
@@ -264,19 +308,23 @@
     function addItemToInventory(id, amount = 1, skipUnlock = false){
       if (!BLOCK_BY_ID[id]) return false;
       let remaining = amount;
-      for (let i = 0; i < HOTBAR_SIZE && remaining > 0; i++) {
-        const slot = hotbarInventory[i];
-        if (slot && slot.id === id && slot.count < MAX_STACK) {
-          const add = Math.min(MAX_STACK - slot.count, remaining);
-          slot.count += add;
-          remaining -= add;
+      for (const slots of getAllInventoryContainers()) {
+        for (let i = 0; i < slots.length && remaining > 0; i++) {
+          const slot = slots[i];
+          if (slot && slot.id === id && slot.count < MAX_STACK) {
+            const add = Math.min(MAX_STACK - slot.count, remaining);
+            slot.count += add;
+            remaining -= add;
+          }
         }
       }
-      for (let i = 0; i < HOTBAR_SIZE && remaining > 0; i++) {
-        if (!hotbarInventory[i]) {
-          const add = Math.min(MAX_STACK, remaining);
-          hotbarInventory[i] = { id, count: add };
-          remaining -= add;
+      for (const slots of getAllInventoryContainers()) {
+        for (let i = 0; i < slots.length && remaining > 0; i++) {
+          if (!slots[i]) {
+            const add = Math.min(MAX_STACK, remaining);
+            slots[i] = { id, count: add };
+            remaining -= add;
+          }
         }
       }
       if (remaining !== amount) {
@@ -285,7 +333,7 @@
           else if (id === 'stone') registerMaterialAcquired('stone', amount - remaining);
           else if (id === 'diamond') registerMaterialAcquired('diamond', amount - remaining);
         }
-        renderHotbar();
+        renderInventoryUI();
       }
       return remaining === 0;
     }
@@ -294,21 +342,23 @@
       if (!slot || slot.count < amount) return false;
       slot.count -= amount;
       if (slot.count <= 0) hotbarInventory[selected] = null;
-      renderHotbar();
+      renderInventoryUI();
       return true;
     }
 
     function consumeInventoryItemById(id, amount = 1) {
       let remaining = amount;
-      for (let i = 0; i < HOTBAR_SIZE && remaining > 0; i++) {
-        const slot = hotbarInventory[i];
-        if (!slot || slot.id !== id) continue;
-        const used = Math.min(slot.count, remaining);
-        slot.count -= used;
-        remaining -= used;
-        if (slot.count <= 0) hotbarInventory[i] = null;
+      for (const slots of getAllInventoryContainers()) {
+        for (let i = 0; i < slots.length && remaining > 0; i++) {
+          const slot = slots[i];
+          if (!slot || slot.id !== id) continue;
+          const used = Math.min(slot.count, remaining);
+          slot.count -= used;
+          remaining -= used;
+          if (slot.count <= 0) slots[i] = null;
+        }
       }
-      if (remaining !== amount) renderHotbar();
+      if (remaining !== amount) renderInventoryUI();
       return remaining === 0;
     }
 
@@ -413,22 +463,129 @@
       return swatch;
     }
 
-    function renderHotbar(){
-      hotbarEl.innerHTML = '';
-      for (let i = 0; i < HOTBAR_SIZE; i++) {
-        const item = hotbarInventory[i];
+    function createInventorySlotElement(item, options = {}) {
+      const { label = '', selectedSlot = false, interactive = false, kind = 'hotbar', index = 0 } = options;
         const slot = document.createElement('div');
-        slot.className = 'slot' + (i===selected? ' selected':'');
-        const num = document.createElement('div'); num.className='num'; num.textContent = i === 9 ? '0' : (i+1);
+      slot.className = 'slot'
+        + (selectedSlot ? ' selected' : '')
+        + (interactive ? ' interactive' : '')
+        + (draggedInventorySource && draggedInventorySource.kind === kind && draggedInventorySource.index === index ? ' dragging-source' : '');
+      if (label) {
+        const num = document.createElement('div');
+        num.className='num';
+        num.textContent = label;
         slot.appendChild(num);
+      }
         if (item) {
           const swatch = createHotbarIconElement(item.id);
           const name = document.createElement('div'); name.className='block-name'; name.textContent = getItemLabel(item.id);
           const count = document.createElement('div'); count.className='count'; count.textContent = String(item.count);
           slot.appendChild(swatch); slot.appendChild(name); slot.appendChild(count);
         }
-        hotbarEl.appendChild(slot);
+      if (interactive) {
+        slot.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          if (e.button !== 0) return;
+          const slotItem = getInventorySlotValue(kind, index);
+          if (!draggedInventoryItem && !slotItem) return;
+          if (!draggedInventoryItem) {
+            draggedInventoryItem = slotItem;
+            draggedInventorySource = { kind, index };
+            setInventorySlotValue(kind, index, null);
+          } else if (!slotItem) {
+            setInventorySlotValue(kind, index, draggedInventoryItem);
+            clearDraggedInventoryItem();
+          } else if (slotItem.id === draggedInventoryItem.id && slotItem.count < MAX_STACK) {
+            const moved = Math.min(MAX_STACK - slotItem.count, draggedInventoryItem.count);
+            slotItem.count += moved;
+            draggedInventoryItem.count -= moved;
+            if (draggedInventoryItem.count <= 0) clearDraggedInventoryItem();
+          } else {
+            setInventorySlotValue(kind, index, draggedInventoryItem);
+            draggedInventoryItem = slotItem;
+            draggedInventorySource = { kind, index };
+          }
+          renderInventoryUI();
+          updateDraggedInventoryItemPosition(e.clientX, e.clientY);
+        });
+      }
+      return slot;
+    }
+
+    function renderHotbar(){
+      hotbarEl.innerHTML = '';
+      for (let i = 0; i < HOTBAR_SIZE; i++) {
+        hotbarEl.appendChild(createInventorySlotElement(hotbarInventory[i], {
+          label: i === 9 ? '0' : String(i + 1),
+          selectedSlot: i === selected,
+          kind: 'hotbar',
+          index: i
+        }));
       }
     }
-    renderHotbar();
-    window.addEventListener('keydown', (e)=>{ const n = parseInt(e.key,10); if (!Number.isNaN(n) && ((n>=1 && n<=9) || n===0)){ selected = n === 0 ? 9 : n-1; renderHotbar(); } if (e.code==='Space' || e.code==='KeyW' || e.code==='ArrowUp') e.preventDefault(); });
+
+    function renderInventoryPanel() {
+      inventoryStorageEl.innerHTML = '';
+      inventoryHotbarEl.innerHTML = '';
+      for (let i = 0; i < STORAGE_SIZE; i++) {
+        inventoryStorageEl.appendChild(createInventorySlotElement(storageInventory[i], {
+          interactive: true,
+          kind: 'storage',
+          index: i
+        }));
+      }
+      for (let i = 0; i < HOTBAR_SIZE; i++) {
+        inventoryHotbarEl.appendChild(createInventorySlotElement(hotbarInventory[i], {
+          label: i === 9 ? '0' : String(i + 1),
+          selectedSlot: i === selected,
+          interactive: true,
+          kind: 'hotbar',
+          index: i
+        }));
+      }
+      if (draggedInventoryItem) {
+        draggedInventoryItemEl.innerHTML = '';
+        draggedInventoryItemEl.appendChild(createInventorySlotElement(draggedInventoryItem));
+      } else {
+        draggedInventoryItemEl.innerHTML = '';
+      }
+    }
+
+    function renderInventoryUI() {
+      renderHotbar();
+      renderInventoryPanel();
+    }
+
+    function toggleInventory(open = !inventoryOpen) {
+      inventoryOpen = open;
+      inventoryOverlayEl.classList.toggle('hidden', !inventoryOpen);
+      if (!inventoryOpen && draggedInventoryItem && draggedInventorySource) {
+        const existing = getInventorySlotValue(draggedInventorySource.kind, draggedInventorySource.index);
+        if (!existing) setInventorySlotValue(draggedInventorySource.kind, draggedInventorySource.index, draggedInventoryItem);
+        clearDraggedInventoryItem();
+      }
+      renderInventoryUI();
+    }
+
+    inventoryOverlayEl.addEventListener('mousedown', (e) => {
+      if (e.target === inventoryOverlayEl && draggedInventoryItem && draggedInventorySource) {
+        const existing = getInventorySlotValue(draggedInventorySource.kind, draggedInventorySource.index);
+        if (!existing) setInventorySlotValue(draggedInventorySource.kind, draggedInventorySource.index, draggedInventoryItem);
+        clearDraggedInventoryItem();
+        renderInventoryUI();
+      }
+    });
+    window.addEventListener('mousemove', (e) => updateDraggedInventoryItemPosition(e.clientX, e.clientY));
+
+    renderInventoryUI();
+    window.addEventListener('keydown', (e)=>{
+      if (e.code === 'KeyE') {
+        e.preventDefault();
+        toggleInventory();
+        return;
+      }
+      if (inventoryOpen) return;
+      const n = parseInt(e.key,10);
+      if (!Number.isNaN(n) && ((n>=1 && n<=9) || n===0)){ selected = n === 0 ? 9 : n-1; renderInventoryUI(); }
+      if (e.code==='Space' || e.code==='KeyW' || e.code==='ArrowUp') e.preventDefault();
+    });

@@ -153,7 +153,7 @@
     }
 
     function handleBlockAction(e) {
-      if (deathSequence.active) return;
+      if (deathSequence.active || inventoryOpen) return;
       const { gx, gy, worldPx, worldPy } = getMouseGridTarget();
       if (e.button === 2) {
         const selectedItem = hotbarInventory[selected];
@@ -295,12 +295,14 @@
     });
 
     canvas.addEventListener('mousedown', e => {
+      if (inventoryOpen) return;
       if (e.button === 0) mouseButtons.left = true;
       if (e.button === 2) mouseButtons.right = true;
       handleBlockAction(e);
     });
 
     canvas.addEventListener('mouseup', e => {
+      if (inventoryOpen) return;
       if (e.button === 0) mouseButtons.left = false;
       if (e.button === 2) mouseButtons.right = false;
       if (e.button === 0) resetMining();

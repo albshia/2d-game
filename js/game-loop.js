@@ -76,7 +76,7 @@
       } else {
         resetMining();
       }
-      if (!deathSequence.active) {
+      if (!deathSequence.active && !inventoryOpen) {
         let ax = 0;
         if (keys.left) ax -= 1; if (keys.right) ax += 1;
         const targetVx = ax * player.speed;

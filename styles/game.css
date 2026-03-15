@@ -19,6 +19,58 @@
       pointer-events: none;
       backdrop-filter: blur(6px);
     }
+    #inventoryOverlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,.42);
+      backdrop-filter: blur(10px);
+      pointer-events: auto;
+      z-index: 20;
+    }
+    #inventoryOverlay.hidden {
+      display: none;
+    }
+    #inventoryPanel {
+      width: min(760px, calc(100vw - 32px));
+      background: rgba(15,18,24,.88);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 18px;
+      box-shadow: 0 24px 80px rgba(0,0,0,.45);
+      padding: 18px;
+    }
+    .inventory-title,
+    .inventory-subtitle {
+      color: rgba(255,255,255,.92);
+      text-shadow: 0 1px 2px rgba(0,0,0,.55);
+      letter-spacing: .3px;
+    }
+    .inventory-title {
+      font-size: 18px;
+      margin-bottom: 14px;
+    }
+    .inventory-subtitle {
+      font-size: 13px;
+      margin: 14px 0 10px;
+    }
+    .inventory-grid {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 10px;
+    }
+    .inventory-hotbar {
+      margin-top: 0;
+    }
+    #draggedInventoryItem {
+      position: fixed;
+      left: 0;
+      top: 0;
+      pointer-events: none;
+      z-index: 25;
+      transform: translate(-9999px, -9999px);
+    }
     #healthHud {
       position: fixed;
       top: 14px;
@@ -62,9 +114,19 @@
       display:flex; align-items:center; justify-content:center;
       position: relative;
     }
+    .slot.interactive {
+      cursor: grab;
+      pointer-events: auto;
+    }
+    .slot.interactive:active {
+      cursor: grabbing;
+    }
     .slot.selected {
       border-color: rgba(255,255,255,.9);
       box-shadow: 0 0 0 2px rgba(0,0,0,.5) inset, 0 8px 20px rgba(0,0,0,.35);
+    }
+    .slot.dragging-source {
+      opacity: .45;
     }
     .slot .num {
       position:absolute; left:6px; top:4px;
