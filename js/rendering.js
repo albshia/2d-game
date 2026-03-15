@@ -756,10 +756,11 @@
       const endX = Math.ceil((cam.x + canvas.width) / tileSize) + 1;
       const startY = Math.floor(cam.y / tileSize) - 1;
       const endY = Math.ceil((cam.y + canvas.height) / tileSize) + 1;
+      const caveDarknessCeilingY = Math.floor(HEIGHT * 0.42);
 
       function getTileBrightness(gx, gy) {
         if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT) return brightness;
-        if (!hasOpenSkyAt(gx, gy)) return 0.16;
+        if (gy <= caveDarknessCeilingY && !hasOpenSkyAt(gx, gy)) return 0.16;
         return brightness;
       }
 
