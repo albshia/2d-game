@@ -283,8 +283,6 @@
         if (!skipUnlock) {
           if (id === 'log') registerMaterialAcquired('wood', amount - remaining);
           else if (id === 'stone') registerMaterialAcquired('stone', amount - remaining);
-          else if (id === 'iron_ore') registerMaterialAcquired('iron', amount - remaining);
-          else if (id === 'gold_ore') registerMaterialAcquired('gold', amount - remaining);
           else if (id === 'diamond') registerMaterialAcquired('diamond', amount - remaining);
         }
         renderHotbar();
