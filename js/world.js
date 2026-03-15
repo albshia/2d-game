@@ -155,7 +155,7 @@
       carveOreVeins('diamond_ore', 60, 150, 60, 2, 5);
 
       function generateLavaPools() {
-        const poolCount = 18 + Math.floor(Math.random() * 10);
+        const poolCount = 34 + Math.floor(Math.random() * 16);
         for (let i = 0; i < poolCount; i++) {
           const cx = 6 + Math.floor(Math.random() * (WIDTH - 12));
           const depth = 72 + Math.random() * 72;
