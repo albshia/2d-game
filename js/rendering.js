@@ -210,6 +210,27 @@
       return Math.sin(actionProgress * Math.PI);
     }
 
+    function drawPlayerWithDeathPose(drawBaseSprite, screenX, screenY, pixel, facing, walkCycle, moving) {
+      if (!deathSequence.active) {
+        drawBaseSprite(screenX, screenY, pixel, facing, walkCycle, moving);
+        return;
+      }
+
+      const spriteWidth = 16 * pixel;
+      const spriteHeight = 32 * pixel;
+      const pivotX = screenX + spriteWidth * 0.5;
+      const pivotY = screenY + spriteHeight * 0.18;
+
+      ctx.save();
+      ctx.translate(pivotX, pivotY);
+      ctx.rotate(-Math.PI / 2);
+      ctx.translate(-spriteWidth * 0.5, -spriteHeight * 0.5);
+      drawBaseSprite(0, 0, pixel, facing, 0, false);
+      ctx.fillStyle = 'rgba(200, 35, 35, 0.38)';
+      ctx.fillRect(0, 0, spriteWidth, spriteHeight);
+      ctx.restore();
+    }
+
     function drawSteve(screenX, screenY, pixel, facing, walkCycle, moving) {
       const dir = facing >= 0 ? 1 : -1;
       const legSwing = moving ? Math.sin(walkCycle) * pixel * 0.9 : 0;
@@ -832,12 +853,12 @@
       const moving = Math.abs(player.vx) > 0.15 && player.grounded;
       const charPixel = (player.h * tileSize) / 32;
       if (player.model === 'alex') {
-        drawAlex(screenX, screenY, charPixel, player.facing, player.walkCycle, moving);
+        drawPlayerWithDeathPose(drawAlex, screenX, screenY, charPixel, player.facing, player.walkCycle, moving);
       } else {
-        drawSteve(screenX, screenY, charPixel, player.facing, player.walkCycle, moving);
+        drawPlayerWithDeathPose(drawSteve, screenX, screenY, charPixel, player.facing, player.walkCycle, moving);
       }
       drawMiningCracks(cam);
-      if (player.hurtTimer > 0) {
+      if (player.hurtTimer > 0 && !deathSequence.active) {
         ctx.fillStyle = 'rgba(255, 45, 45, 0.35)';
         ctx.fillRect(screenX, screenY, player.w * tileSize, player.h * tileSize);
       }
