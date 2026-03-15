@@ -298,6 +298,20 @@
       return true;
     }
 
+    function consumeInventoryItemById(id, amount = 1) {
+      let remaining = amount;
+      for (let i = 0; i < HOTBAR_SIZE && remaining > 0; i++) {
+        const slot = hotbarInventory[i];
+        if (!slot || slot.id !== id) continue;
+        const used = Math.min(slot.count, remaining);
+        slot.count -= used;
+        remaining -= used;
+        if (slot.count <= 0) hotbarInventory[i] = null;
+      }
+      if (remaining !== amount) renderHotbar();
+      return remaining === 0;
+    }
+
     function isPlaceableItem(id) {
       return !NON_PLACEABLE_ITEMS.has(id);
     }

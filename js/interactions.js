@@ -214,6 +214,24 @@
             acted = true;
             return;
           }
+          if (selectedBlock === 'coal') {
+            let smelted = false;
+            if (getInventoryCount('iron_ore') > 0) {
+              if (consumeSelectedItem(1) && consumeInventoryItemById('iron_ore', 1)) {
+                registerMaterialAcquired('iron', 1);
+                smelted = true;
+              }
+            } else if (getInventoryCount('gold_ore') > 0) {
+              if (consumeSelectedItem(1) && consumeInventoryItemById('gold_ore', 1)) {
+                registerMaterialAcquired('gold', 1);
+                smelted = true;
+              }
+            }
+            if (smelted) {
+              acted = true;
+            }
+            return;
+          }
           if (!isPlaceableItem(selectedBlock)) return;
           if (selectedBlock === 'door') {
             // Place 2-block tall door from lower block (clicked) upward
