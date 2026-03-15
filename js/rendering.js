@@ -760,6 +760,7 @@
 
       function getTileBrightness(gx, gy) {
         if (gx < 0 || gy < 0 || gx >= WIDTH || gy >= HEIGHT) return brightness;
+        if (hasOpenSkyAt(gx, gy)) return 1;
         if (gy <= caveDarknessCeilingY && !hasOpenSkyAt(gx, gy)) return 0.16;
         return brightness;
       }
