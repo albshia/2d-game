@@ -170,6 +170,70 @@
         }
       }
 
+      function getSurfaceY(x) {
+        if (x < 0 || x >= WIDTH) return -1;
+        for (let y = HEIGHT - 2; y >= 1; y--) {
+          if (world[x][y] && world[x][y + 1] === null) return y;
+        }
+        return -1;
+      }
+
+      function generateSurfaceLakes() {
+        const lakeCount = 9 + Math.floor(Math.random() * 6);
+        for (let i = 0; i < lakeCount; i++) {
+          const cx = 10 + Math.floor(Math.random() * (WIDTH - 20));
+          const radius = 4 + Math.floor(Math.random() * 4);
+          const spanStart = cx - radius - 2;
+          const spanEnd = cx + radius + 2;
+          if (spanStart < 2 || spanEnd >= WIDTH - 2) continue;
+
+          const surfaceYs = [];
+          let valid = true;
+          for (let x = spanStart; x <= spanEnd; x++) {
+            const sy = getSurfaceY(x);
+            if (sy < 0 || !['grass', 'dirt', 'sand'].includes(world[x][sy])) {
+              valid = false;
+              break;
+            }
+            surfaceYs.push(sy);
+          }
+          if (!valid) continue;
+
+          const minSurface = Math.min(...surfaceYs);
+          const maxSurface = Math.max(...surfaceYs);
+          if (maxSurface - minSurface > 3) continue;
+
+          const waterLevel = minSurface - 1;
+          const maxDepth = 2 + Math.floor(Math.random() * 2);
+
+          for (let x = spanStart; x <= spanEnd; x++) {
+            const surfaceY = getSurfaceY(x);
+            if (surfaceY < 0) continue;
+            const dist = Math.abs(x - cx);
+            const normalized = dist / (radius + 0.5);
+            if (normalized > 1.15) continue;
+
+            const carveDepth = Math.max(1, Math.round((1 - normalized) * maxDepth));
+            const floorY = Math.max(2, waterLevel - carveDepth);
+
+            for (let y = surfaceY; y > floorY; y--) {
+              world[x][y] = y <= waterLevel ? 'water' : null;
+            }
+            world[x][floorY] = 'sand';
+            if (floorY - 1 >= 0 && world[x][floorY - 1] === 'dirt') world[x][floorY - 1] = 'sand';
+
+            if (dist >= radius - 1 && dist <= radius + 1) {
+              if (world[x][surfaceY] && world[x][surfaceY] !== 'water') world[x][surfaceY] = 'sand';
+              if (surfaceY - 1 >= 0 && world[x][surfaceY - 1] && world[x][surfaceY - 1] !== 'water') {
+                world[x][surfaceY - 1] = 'sand';
+              }
+            }
+          }
+        }
+      }
+
+      generateSurfaceLakes();
+
       // Add identical trees (logs + grass-leaf canopy) with wider spacing.
       let lastTreeX = -999;
       const minTreeSpacing = 9;

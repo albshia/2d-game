@@ -5,6 +5,7 @@
     const BREAK_TIME = {
       grass: 0.3,
       dirt: 0.35,
+      sand: 0.28,
       stone: 1.25,
       log: 0.9,
       water: Infinity,
@@ -47,7 +48,7 @@
     function getToolMiningMultiplier(blockId) {
       const id = getSelectedItemId();
       if (!id) return 1;
-      if ((blockId === 'grass' || blockId === 'dirt') && id.endsWith('_shovel')) {
+      if ((blockId === 'grass' || blockId === 'dirt' || blockId === 'sand') && id.endsWith('_shovel')) {
         if (id === 'wood_shovel') return 1.8;
         if (id === 'gold_shovel') return 2.2;
         if (id === 'stone_shovel') return 2.45;
@@ -74,7 +75,7 @@
     function getActionToolForBlock(blockId) {
       const id = getSelectedItemId();
       if (!id) return null;
-      if ((blockId === 'grass' || blockId === 'dirt') && id.endsWith('_shovel')) return id;
+      if ((blockId === 'grass' || blockId === 'dirt' || blockId === 'sand') && id.endsWith('_shovel')) return id;
       if ((blockId === 'stone' || blockId.endsWith('_ore')) && id.endsWith('_pickaxe')) return id;
       if (blockId === 'log' && id.endsWith('_axe')) return id;
       return null;

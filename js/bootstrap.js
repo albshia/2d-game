@@ -4,6 +4,7 @@
     const BLOCKS = [
       { id: 'grass', color: '#4caf50' },
       { id: 'dirt',  color: '#CD853F' },
+      { id: 'sand', color: '#d9c27a' },
       { id: 'stone', color: '#9e9e9e' },
       { id: 'log',  color: '#8B4513' },
       { id: 'water', color: '#2196f3' },
