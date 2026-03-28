@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MiniCraft</title>
+  <style>
+    :root {
+      --bg-top: #14281d;
+      --bg-mid: #284b2e;
+      --bg-bottom: #6b8f3e;
+      --panel: rgba(7, 12, 10, 0.62);
+      --panel-border: rgba(240, 245, 235, 0.16);
+      --text: #f5f7f0;
+      --muted: rgba(245, 247, 240, 0.78);
+      --accent: #f2c14e;
+      --accent-dark: #b98a1f;
+      --danger: #d32f2f;
+      --danger-light: #ff5252;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at top, rgba(255, 241, 196, 0.2), transparent 28%),
+        linear-gradient(180deg, var(--bg-top) 0%, var(--bg-mid) 45%, var(--bg-bottom) 100%);
+      color: var(--text);
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    body {
+      position: relative;
+    }
+
+    #game {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #hud {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 18px;
+      pointer-events: none;
+    }
+
+    #hotbar {
+      display: flex;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(8px);
+    }
+
+    #healthHud,
+    #hint,
+    #controls > div {
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 14px 35px rgba(0, 0, 0, 0.2);
+    }
+
+    #healthHud {
+      position: fixed;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 280px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      pointer-events: none;
+    }
+
+    #healthBarBg {
+      width: 100%;
+      height: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    #healthBarFill {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--danger), var(--danger-light));
+      transition: width 100ms linear;
+    }
+
+    #healthText {
+      margin-top: 5px;
+      text-align: center;
+      font-size: 12px;
+      letter-spacing: 0.2px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    }
+
+    #hint {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      max-width: 380px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      line-height: 1.4;
+      font-size: 13px;
+      pointer-events: none;
+    }
+
+    #hint kbd {
+      padding: 2px 6px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.06);
+      font-family: Consolas, Monaco, monospace;
+      font-size: 12px;
+    }
+
+    #controls {
+      position: fixed;
+      top: 50%;
+      left: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transform: translateY(-50%);
+    }
+
+    #controls > div {
+      padding: 10px;
+      border-radius: 12px;
+    }
+
+    #skinSelector {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    #inventoryOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.42);
+      backdrop-filter: blur(10px);
+      pointer-events: auto;
+    }
+
+    #inventoryOverlay.hidden {
+      display: none;
+    }
+
+    #inventoryPanel {
+      width: min(760px, calc(100vw - 32px));
+      padding: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 18px;
+      background: rgba(15, 18, 24, 0.88);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+    }
+
+    .inventory-title,
+    .inventory-subtitle {
+      color: rgba(255, 255, 255, 0.92);
+      letter-spacing: 0.3px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+    }
+
+    .inventory-title {
+      margin-bottom: 14px;
+      font-size: 18px;
+    }
+
+    .inventory-subtitle {
+      margin: 14px 0 10px;
+      font-size: 13px;
+    }
+
+    #inventoryTopRow {
+      display: flex;
+      justify-content: flex-start;
+      margin-bottom: 10px;
+    }
+
+    #craftingPanel {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .crafting-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 52px);
+      gap: 10px;
+    }
+
+    #craftingArrow {
+      min-width: 28px;
+      color: rgba(255, 255, 255, 0.82);
+      font-size: 22px;
+      text-align: center;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    }
+
+    .crafting-result {
+      display: grid;
+      grid-template-columns: 52px;
+    }
+
+    .inventory-grid {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 10px;
+    }
+
+    #draggedInventoryItem {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 25;
+      pointer-events: none;
+      transform: translate(-9999px, -9999px);
+    }
+
+    .slot {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 52px;
+      height: 52px;
+      border: 2px solid rgba(255, 255, 255, 0.18);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .slot.interactive {
+      cursor: grab;
+      pointer-events: auto;
+    }
+
+    .slot.interactive:active {
+      cursor: grabbing;
+    }
+
+    .slot.selected {
+      border-color: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5) inset, 0 8px 20px rgba(0, 0, 0, 0.35);
+    }
+
+    .slot.dragging-source {
+      opacity: 0.45;
+    }
+
+    .slot .num {
+      position: absolute;
+      top: 4px;
+      left: 6px;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.9);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+    }
+
+    .slot .swatch {
+      width: 28px;
+      height: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 6px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35) inset;
+    }
+
+    .slot .block-name {
+      position: absolute;
+      bottom: 2px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 10px;
+      white-space: nowrap;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+    }
+
+    .slot .count {
+      position: absolute;
+      right: 6px;
+      bottom: 4px;
+      color: rgba(255, 255, 255, 0.95);
+      font-size: 12px;
+      font-weight: 700;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    }
+
+    #welcomeOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 15;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 24px;
+      pointer-events: none;
+      background:
+        linear-gradient(180deg, rgba(5, 10, 8, 0.1) 0%, rgba(5, 10, 8, 0.18) 42%, rgba(5, 10, 8, 0.72) 100%);
+    }
+
+    .welcome-card {
+      width: min(680px, 100%);
+      padding: 24px;
+      border: 1px solid var(--panel-border);
+      border-radius: 24px;
+      background: var(--panel);
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.35);
+      pointer-events: auto;
+      animation: rise 500ms ease-out;
+    }
+
+    .eyebrow {
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 10px 0 12px;
+      font-size: clamp(2.4rem, 7vw, 4.8rem);
+      line-height: 0.95;
+    }
+
+    .welcome-copy {
+      max-width: 44ch;
+      margin: 0 0 20px;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.55;
+    }
+
+    .welcome-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .button {
+      appearance: none;
+      padding: 12px 18px;
+      border: 0;
+      border-radius: 999px;
+      background: linear-gradient(180deg, #f5d97b 0%, var(--accent) 100%);
+      color: #2b1e03;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+    }
+
+    .button.secondary {
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      box-shadow: none;
+    }
+
+    .welcome-meta {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .meta-card {
+      padding: 12px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .meta-card strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.9rem;
+    }
+
+    .meta-card span {
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.4;
+    }
+
+    @keyframes rise {
+      from {
+        opacity: 0;
+        transform: translateY(24px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 760px) {
+      #hint,
+      #controls {
+        display: none;
+      }
+
+      #healthHud {
+        width: min(280px, calc(100vw - 28px));
+      }
+
+      .welcome-card {
+        padding: 20px;
+      }
+
+      .welcome-meta {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="welcomeOverlay" aria-hidden="false">
+    <div class="welcome-card">
+      <div class="eyebrow">Browser Survival</div>
+      <h1>MiniCraft</h1>
+      <p class="welcome-copy">
+        Drop into a compact sandbox world, gather blocks, craft upgrades, and survive with quick keyboard-and-mouse controls.
+      </p>
+      <div class="welcome-actions">
+        <button class="button" id="startGameButton" type="button">Enter World</button>
+        <button class="button secondary" id="dismissOverlayButton" type="button">Keep Overlay Hidden</button>
+      </div>
+      <div class="welcome-meta">
+        <div class="meta-card">
+          <strong>Explore</strong>
+          <span>Move with WASD, jump with Space, and sprint with Shift.</span>
+        </div>
+        <div class="meta-card">
+          <strong>Build</strong>
+          <span>Break blocks, place new ones, and switch items with the hotbar.</span>
+        </div>
+        <div class="meta-card">
+          <strong>Craft</strong>
+          <span>Open inventory with E and combine materials into better gear.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="hint">
+    Click to lock mouse.<br />
+    Move: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> • Jump: <kbd>Space</kbd> • Sprint: <kbd>Shift</kbd><br />
+    Break: Hold left click • Place: Right click • Hotbar: <kbd>1</kbd>-<kbd>9</kbd><kbd>0</kbd>
+  </div>
+
+  <canvas id="game"></canvas>
+
+  <div id="healthHud">
+    <div id="healthBarBg"><div id="healthBarFill"></div></div>
+    <div id="healthText">Health: 20 / 20</div>
+  </div>
+
+  <div id="inventoryOverlay" class="hidden">
+    <div id="inventoryPanel">
+      <div class="inventory-title">Inventory</div>
+      <div id="inventoryTopRow">
+        <div>
+          <div class="inventory-subtitle">Crafting</div>
+          <div id="craftingPanel">
+            <div id="craftingGrid" class="crafting-grid"></div>
+            <div id="craftingArrow">-&gt;</div>
+            <div id="craftingResult" class="crafting-result"></div>
+          </div>
+        </div>
+      </div>
+      <div class="inventory-subtitle">Storage</div>
+      <div id="inventoryStorage" class="inventory-grid"></div>
+      <div class="inventory-subtitle">Hotbar</div>
+      <div id="inventoryHotbar" class="inventory-grid inventory-hotbar"></div>
+    </div>
+    <div id="draggedInventoryItem"></div>
+  </div>
+
+  <div id="hud">
+    <div id="hotbar"></div>
+  </div>
+
+  <div id="controls">
+    <div>
+      <div style="margin-bottom: 8px; color: rgba(255,255,255,0.9); font-size: 12px;">Skin</div>
+      <div id="skinSelector"></div>
+    </div>
+  </div>
+
+  <script>
+    const welcomeOverlay = document.getElementById("welcomeOverlay");
+    const startGameButton = document.getElementById("startGameButton");
+    const dismissOverlayButton = document.getElementById("dismissOverlayButton");
+    const gameCanvas = document.getElementById("game");
+
+    function hideWelcomeOverlay() {
+      welcomeOverlay.style.display = "none";
+      welcomeOverlay.setAttribute("aria-hidden", "true");
+    }
+
+    startGameButton.addEventListener("click", () => {
+      hideWelcomeOverlay();
+      if (gameCanvas.requestPointerLock) {
+        gameCanvas.requestPointerLock();
+      }
+    });
+
+    dismissOverlayButton.addEventListener("click", hideWelcomeOverlay);
+  </script>
+  <script src="js/bootstrap.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/entities.js"></script>
+  <script src="js/interactions.js"></script>
+  <script src="js/rendering.js"></script>
+  <script src="js/game-loop.js"></script>
+</body>
+</html>
